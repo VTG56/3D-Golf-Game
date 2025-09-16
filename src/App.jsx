@@ -11,15 +11,41 @@ import ForgotPassword from './components/ForgotPassword';
 import Dashboard from './components/Dashboard';
 import ProtectedRoute from './components/ProtectedRoute';
 
+// Game Pages
+import LevelSelect from './pages/LevelSelect';
+import Game from './pages/Game';
+
 // Component to handle authenticated user redirection
 function AuthenticatedRoute({ children }) {
   const { user } = useAuth();
   
   // If user is already logged in, redirect to dashboard
-  if (user) {
+  if (user && !user.isAnonymous) {
     return <Navigate to="/dashboard" replace />;
   }
   
+  return children;
+}
+
+// Component to handle guest-accessible routes
+function GuestRoute({ children }) {
+  const { user, loading } = useAuth();
+  
+  // Show loading while checking auth state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 flex items-center justify-center">
+        <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <p className="text-white font-medium text-lg">Loading...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  // Allow access for both authenticated users and guests (including anonymous)
   return children;
 }
 
@@ -90,7 +116,7 @@ function App() {
               } 
             />
             
-            {/* Protected Routes */}
+            {/* Protected Routes (Authenticated Users Only) */}
             <Route 
               path="/dashboard" 
               element={
@@ -100,20 +126,38 @@ function App() {
               } 
             />
             
-            {/* Future Protected Routes (placeholder for now) */}
+            {/* Game Routes (Accessible to both authenticated users and guests) */}
+            <Route 
+              path="/levels" 
+              element={
+                <GuestRoute>
+                  <LevelSelect />
+                </GuestRoute>
+              } 
+            />
+            <Route 
+              path="/game/:levelId" 
+              element={
+                <GuestRoute>
+                  <Game />
+                </GuestRoute>
+              } 
+            />
+            
+            {/* Legacy Protected Routes (placeholder for now) */}
             <Route 
               path="/play" 
               element={
                 <ProtectedRoute>
                   <div className="min-h-screen bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200 flex items-center justify-center">
                     <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl text-center">
-                      <h1 className="text-3xl font-bold text-white mb-4 font-game">COMING SOON</h1>
-                      <p className="text-white/80">Golf gameplay will be available here!</p>
+                      <h1 className="text-3xl font-bold text-white mb-4 font-game">REDIRECTING...</h1>
+                      <p className="text-white/80">Taking you to level select...</p>
                       <button 
-                        onClick={() => window.history.back()}
+                        onClick={() => window.location.href = '/levels'}
                         className="mt-4 bg-golf-green-500 text-white px-6 py-2 rounded-lg hover:bg-golf-green-600 transition-colors"
                       >
-                        Go Back
+                        Go to Levels
                       </button>
                     </div>
                   </div>

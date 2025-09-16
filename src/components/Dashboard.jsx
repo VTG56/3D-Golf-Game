@@ -1,8 +1,10 @@
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import ThreeScene from './ThreeScene';
 import Navbar from './Navbar';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   const getDisplayName = () => {
@@ -13,6 +15,11 @@ export default function Dashboard() {
       return user.email.split('@')[0];
     }
     return 'Player';
+  };
+
+  // Handle entering the game
+  const handleEnterGame = () => {
+    navigate('/levels');
   };
 
   return (
@@ -55,7 +62,10 @@ export default function Dashboard() {
                 <p className="text-white/80 text-sm mb-4">
                   Start a new round of minigolf
                 </p>
-                <button className="bg-gradient-to-r from-golf-green-500 to-emerald-500 text-white font-semibold py-3 px-6 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 hover:shadow-lg font-game">
+                <button 
+                  onClick={handleEnterGame}
+                  className="bg-gradient-to-r from-golf-green-500 to-emerald-500 text-white font-semibold py-3 px-6 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 hover:shadow-lg font-game"
+                >
                   ENTER GAME
                 </button>
               </div>
@@ -116,14 +126,16 @@ export default function Dashboard() {
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { icon: '🎮', label: 'Practice Mode', action: 'Coming Soon' },
-                { icon: '👥', label: 'Multiplayer', action: 'Coming Soon' },
-                { icon: '🏅', label: 'Tournaments', action: 'Coming Soon' },
-                { icon: '⚙️', label: 'Settings', action: 'Coming Soon' }
+                { icon: '🎮', label: 'Practice Mode', action: 'Coming Soon', onClick: null },
+                { icon: '👥', label: 'Multiplayer', action: 'Coming Soon', onClick: null },
+                { icon: '🏅', label: 'Tournaments', action: 'Coming Soon', onClick: null },
+                { icon: '⚙️', label: 'Settings', action: 'Coming Soon', onClick: null }
               ].map((item, index) => (
                 <button
                   key={index}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105 text-center"
+                  onClick={item.onClick || undefined}
+                  disabled={!item.onClick}
+                  className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105 text-center disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <div className="text-2xl mb-2">{item.icon}</div>
                   <div className="text-white font-medium text-sm">{item.label}</div>

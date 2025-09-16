@@ -1,27 +1,41 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../hooks/useAuth';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '../firebase/firebase';
 import ThreeScene from './ThreeScene';
+import toast from 'react-hot-toast';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const { resetPassword } = useAuth();
 
-  const handlePasswordReset = async (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     
     if (!email) {
+      toast.error('Please enter your email address');
       return;
     }
 
     try {
       setIsLoading(true);
-      await resetPassword(email);
+      await sendPasswordResetEmail(auth, email);
       setEmailSent(true);
+      toast.success('Password reset email sent! Check your inbox.');
     } catch (error) {
-      console.error('Password reset failed:', error);
+      console.error('Password reset error:', error);
+      let message = 'Failed to send reset email';
+      
+      if (error.code === 'auth/user-not-found') {
+        message = 'No account found with this email address';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Too many requests. Please try again later';
+      }
+      
+      toast.error(message);
     } finally {
       setIsLoading(false);
     }
@@ -34,7 +48,7 @@ export default function ForgotPassword() {
         <ThreeScene className="w-full h-full" />
       </div>
       
-      {/* Reset Password Form Overlay */}
+      {/* Form Overlay */}
       <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
         <div className="w-full max-w-md">
           {/* Back to login */}
@@ -58,12 +72,12 @@ export default function ForgotPassword() {
                     RESET PASSWORD
                   </h2>
                   <p className="text-white/80">
-                    Enter your email address and we'll send you a reset link
+                    Enter your email to receive reset instructions
                   </p>
                 </div>
 
                 {/* Reset Form */}
-                <form onSubmit={handlePasswordReset} className="space-y-6">
+                <form onSubmit={handleResetPassword} className="space-y-6">
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-white/90 mb-2">
                       Email Address
@@ -90,69 +104,44 @@ export default function ForgotPassword() {
                         <span>Sending...</span>
                       </div>
                     ) : (
-                      'SEND RESET LINK'
+                      'SEND RESET EMAIL'
                     )}
                   </button>
                 </form>
               </>
             ) : (
-              // Success State
               <>
-                {/* Success Header */}
-                <div className="text-center mb-8">
-                  <div className="w-16 h-16 bg-golf-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
+                {/* Success State */}
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <span className="text-2xl">✓</span>
                   </div>
-                  <h2 className="text-3xl font-bold text-white mb-2 font-game">
-                    EMAIL SENT
+                  <h2 className="text-2xl font-bold text-white mb-4 font-game">
+                    EMAIL SENT!
                   </h2>
-                  <p className="text-white/80">
-                    We've sent a password reset link to <strong>{email}</strong>
+                  <p className="text-white/80 mb-6">
+                    Check your inbox for password reset instructions. The email may take a few minutes to arrive.
                   </p>
-                </div>
-
-                {/* Instructions */}
-                <div className="space-y-4 text-white/80 text-sm">
-                  <p>Please check your email and follow the instructions to reset your password.</p>
-                  <p>If you don't see the email, check your spam folder.</p>
-                </div>
-
-                {/* Actions */}
-                <div className="mt-8 space-y-4">
-                  <button
-                    onClick={() => {
-                      setEmailSent(false);
-                      setEmail('');
-                    }}
-                    className="w-full bg-white/10 backdrop-blur-sm border border-white/20 text-white font-semibold py-3 px-6 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105"
-                  >
-                    Send Another Email
-                  </button>
-                  
-                  <Link
-                    to="/login"
-                    className="block w-full bg-gradient-to-r from-golf-green-500 to-emerald-500 text-white font-semibold py-3 px-6 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 hover:shadow-lg font-game text-center"
-                  >
-                    BACK TO LOGIN
-                  </Link>
+                  <div className="space-y-3">
+                    <Link
+                      to="/login"
+                      className="block w-full bg-gradient-to-r from-golf-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 font-game text-center"
+                    >
+                      BACK TO LOGIN
+                    </Link>
+                    <button
+                      onClick={() => {
+                        setEmailSent(false);
+                        setEmail('');
+                      }}
+                      className="block w-full bg-white/20 backdrop-blur-sm border border-white/30 text-white font-medium py-2 px-4 rounded-xl hover:bg-white/30 transition-all duration-300"
+                    >
+                      Send Another Email
+                    </button>
+                  </div>
                 </div>
               </>
             )}
-
-            {/* Footer */}
-            <div className="mt-8 text-center">
-              <p className="text-white/80 text-sm">
-                Remember your password?{' '}
-                <Link
-                  to="/login"
-                  className="text-golf-green-300 hover:text-golf-green-200 font-semibold transition-colors duration-200 hover:underline underline-offset-4"
-                >
-                  Sign in
-                </Link>
-              </p>
-            </div>
           </div>
         </div>
       </div>

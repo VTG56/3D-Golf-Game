@@ -60,7 +60,7 @@ export default function Login() {
                 WELCOME BACK
               </h2>
               <p className="text-white/80">
-                Sign in to continue your golf adventure
+                Login to continue your golf adventure
               </p>
             </div>
 
@@ -152,10 +152,10 @@ export default function Login() {
                 {isLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    <span>Signing In...</span>
+                    <span>Logging In...</span>
                   </div>
                 ) : (
-                  'SIGN IN'
+                  'LOGIN'
                 )}
               </button>
             </form>

@@ -1,215 +1,152 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { 
+  onAuthStateChanged, 
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
   signOut,
-  sendPasswordResetEmail,
-  onAuthStateChanged,
+  signInWithPopup,
+  signInAnonymously,
   updateProfile
 } from 'firebase/auth';
-import { doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { auth, googleProvider } from '../firebase/firebase.js';
-import { userDocRef, createUserData } from '../firebase/firestoreRefs.js';
+import { auth, googleProvider } from '../firebase/firebase';
 import toast from 'react-hot-toast';
 
 const AuthContext = createContext({});
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+export function useAuth() {
+  return useContext(AuthContext);
+}
 
-export const AuthProvider = ({ children }) => {
+export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [initializing, setInitializing] = useState(true);
 
-  // Create or update user document in Firestore
-  const createUserDocument = async (user) => {
-    if (!user) return;
-    
-    const userRef = userDocRef(user.uid);
-    const userSnap = await getDoc(userRef);
-    
-    if (!userSnap.exists()) {
-      // Create new user document
-      await setDoc(userRef, createUserData(user));
-      toast.success('Welcome to Golf3D!');
-    } else {
-      // Update existing user's last login
-      await updateDoc(userRef, {
-        lastLogin: new Date(),
-        isOnline: true
-      });
-    }
-  };
-
-  // Email and password sign up
+  // Sign up with email and password
   const signup = async (email, password, displayName) => {
     try {
-      setLoading(true);
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Update user profile with display name
+      // Update display name if provided
       if (displayName) {
         await updateProfile(user, { displayName });
+        // Update local user state
+        setUser({ ...user, displayName });
       }
-      
-      // Create user document in Firestore
-      await createUserDocument(user);
       
       toast.success('Account created successfully!');
       return user;
     } catch (error) {
       console.error('Signup error:', error);
-      toast.error(getAuthErrorMessage(error.code));
+      let message = 'Failed to create account';
+      
+      if (error.code === 'auth/email-already-in-use') {
+        message = 'Email already in use';
+      } else if (error.code === 'auth/weak-password') {
+        message = 'Password should be at least 6 characters';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address';
+      }
+      
+      toast.error(message);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Email and password login
+  // Login with email and password
   const login = async (email, password) => {
     try {
-      setLoading(true);
       const { user } = await signInWithEmailAndPassword(auth, email, password);
-      
-      // Update user document
-      await createUserDocument(user);
-      
-      toast.success('Welcome back!');
+      toast.success('Logged in successfully!');
       return user;
     } catch (error) {
       console.error('Login error:', error);
-      toast.error(getAuthErrorMessage(error.code));
+      let message = 'Failed to log in';
+      
+      if (error.code === 'auth/user-not-found') {
+        message = 'No account found with this email';
+      } else if (error.code === 'auth/wrong-password') {
+        message = 'Incorrect password';
+      } else if (error.code === 'auth/invalid-email') {
+        message = 'Invalid email address';
+      } else if (error.code === 'auth/too-many-requests') {
+        message = 'Too many attempts. Please try again later';
+      }
+      
+      toast.error(message);
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Google sign in
+  // Sign in with Google
   const signInWithGoogle = async () => {
     try {
-      setLoading(true);
       const { user } = await signInWithPopup(auth, googleProvider);
-      
-      // Create user document in Firestore
-      await createUserDocument(user);
-      
       toast.success('Signed in with Google!');
       return user;
     } catch (error) {
       console.error('Google sign in error:', error);
-      if (error.code !== 'auth/popup-closed-by-user') {
-        toast.error(getAuthErrorMessage(error.code));
+      let message = 'Failed to sign in with Google';
+      
+      if (error.code === 'auth/popup-closed-by-user') {
+        message = 'Sign in cancelled';
+      } else if (error.code === 'auth/popup-blocked') {
+        message = 'Popup blocked. Please allow popups and try again';
       }
+      
+      toast.error(message);
       throw error;
-    } finally {
-      setLoading(false);
+    }
+  };
+
+  // Sign in as guest (anonymous)
+  const signInAsGuest = async () => {
+    try {
+      const { user } = await signInAnonymously(auth);
+      toast.success('Playing as guest!');
+      return user;
+    } catch (error) {
+      console.error('Anonymous sign in error:', error);
+      toast.error('Failed to start guest session');
+      throw error;
     }
   };
 
   // Logout
   const logout = async () => {
     try {
-      setLoading(true);
-      
-      // Update user's online status before signing out
-      if (user) {
-        const userRef = userDocRef(user.uid);
-        await updateDoc(userRef, {
-          isOnline: false,
-          lastLogin: new Date()
-        });
-      }
-      
       await signOut(auth);
-      toast.success('Signed out successfully');
+      setUser(null);
+      toast.success('Logged out successfully');
     } catch (error) {
       console.error('Logout error:', error);
-      toast.error('Error signing out');
+      toast.error('Failed to log out');
       throw error;
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Password reset
-  const resetPassword = async (email) => {
-    try {
-      setLoading(true);
-      await sendPasswordResetEmail(auth, email);
-      toast.success('Password reset email sent!');
-    } catch (error) {
-      console.error('Password reset error:', error);
-      toast.error(getAuthErrorMessage(error.code));
-      throw error;
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auth error message helper
-  const getAuthErrorMessage = (errorCode) => {
-    switch (errorCode) {
-      case 'auth/user-disabled':
-        return 'This account has been disabled.';
-      case 'auth/user-not-found':
-        return 'No account found with this email.';
-      case 'auth/wrong-password':
-        return 'Incorrect password.';
-      case 'auth/email-already-in-use':
-        return 'An account with this email already exists.';
-      case 'auth/weak-password':
-        return 'Password should be at least 6 characters.';
-      case 'auth/invalid-email':
-        return 'Please enter a valid email address.';
-      case 'auth/too-many-requests':
-        return 'Too many attempts. Please try again later.';
-      case 'auth/popup-closed-by-user':
-        return 'Sign in was cancelled.';
-      case 'auth/network-request-failed':
-        return 'Network error. Please check your connection.';
-      default:
-        return 'An error occurred. Please try again.';
-    }
-  };
-
-  // Listen to auth state changes
+  // Listen for auth state changes
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
-      
-      if (initializing) {
-        setInitializing(false);
-      }
     });
 
     return unsubscribe;
-  }, [initializing]);
+  }, []);
 
-  // Context value
   const value = {
     user,
     loading,
-    initializing,
     signup,
     login,
-    signInWithGoogle,
     logout,
-    resetPassword
+    signInWithGoogle,
+    signInAsGuest
   };
 
   return (
     <AuthContext.Provider value={value}>
-      {!initializing && children}
+      {!loading && children}
     </AuthContext.Provider>
   );
-};
+}
