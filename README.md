@@ -1,12 +1,77 @@
-# React + Vite
+# ⛳ Golf3D – Web Minigolf Game
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+An interactive **3D Minigolf experience** built with **React + Three.js** and powered by **Firebase (Auth + Firestore)**.  
+This project is part of **CloneFest 2025 – Week 3 Challenge**.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Tech Stack
 
-## Expanding the ESLint configuration
+- **Frontend:** React (Vite) + Three.js (react-three-fiber)
+- **Backend:** Firebase (Auth, Firestore, Storage)
+- **Auth:** Email/Password & Google Sign-In
+- **Hosting:** Firebase Hosting
+- **Deployment:** CI/CD with GitHub → Firebase
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+## 📂 Project Structure
+
+src/
+├── assets/ # Images, 3D models, textures
+├── components/ # UI + 3D components
+├── contexts/ # React contexts (Auth, Game, etc.)
+├── firebase/ # Firebase config + helpers
+├── hooks/ # Custom React hooks
+├── pages/ # Pages for routing
+├── routes/ # Router setup
+├── styles/ # Global CSS / Tailwind
+└── main.jsx # Vite entry point
+
+---
+
+## 🔑 Firebase Setup
+
+1. Create Firebase project `Golf3D` and register a web app.
+2. Enable **Authentication → Email/Password & Google Sign-In**.
+3. Create `.env.local` with the following keys:
+
+
+VITE_FIREBASE_API_KEY=xxxx
+VITE_FIREBASE_AUTH_DOMAIN=xxxx
+VITE_FIREBASE_PROJECT_ID=xxxx
+VITE_FIREBASE_STORAGE_BUCKET=xxxx
+VITE_FIREBASE_MESSAGING_SENDER_ID=xxxx
+VITE_FIREBASE_APP_ID=xxxx
+
+
+---
+
+## 🔑 Run Locally
+
+npm install
+npm run dev
+
+🎮 Features Roadmap
+
+-- Project setup with Vite + Firebase
+
+-- Landing page with 3D background
+
+-- Firebase Auth (Google + Email/Password)
+
+-- Protected routes (Dashboard)
+
+-- Firestore data handling (player stats, leaderboards)
+
+-- 3D Golf mechanics (ball physics, hole detection)
+
+-- Multiplayer (stretch goal 🤯)
+
+---
+
+## 👨‍💻 Contributors
+
+VTG & Team – RVCE CSE 2025
+
+--- 

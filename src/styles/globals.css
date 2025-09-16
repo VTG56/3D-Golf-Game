@@ -1,0 +1,309 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Orbitron:wght@400;700;800;900&display=swap');
+
+/* CSS Variables for Golf3D Theme */
+:root {
+  --golf-green-50: #f0fdf4;
+  --golf-green-100: #dcfce7;
+  --golf-green-200: #bbf7d0;
+  --golf-green-300: #86efac;
+  --golf-green-400: #4ade80;
+  --golf-green-500: #22c55e;
+  --golf-green-600: #16a34a;
+  --golf-green-700: #15803d;
+  --golf-green-800: #166534;
+  --golf-green-900: #14532d;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: inherit;
+  line-height: 1.5;
+  color: #1f2937;
+  background-color: #f9fafb;
+  overflow-x: hidden;
+}
+
+/* Game Font Class */
+.font-game {
+  font-family: 'Orbitron', 'Inter', monospace;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+/* Custom Animations */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@keyframes bounce-slow {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  60% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(34, 197, 94, 0.6);
+  }
+}
+
+/* Animation Classes */
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+.animate-bounce-slow {
+  animation: bounce-slow 2s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Glass Morphism Utilities */
+.glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom Golf Green Colors for Tailwind */
+.text-golf-green-300 {
+  color: var(--golf-green-300);
+}
+
+.text-golf-green-400 {
+  color: var(--golf-green-400);
+}
+
+.text-golf-green-500 {
+  color: var(--golf-green-500);
+}
+
+.bg-golf-green-300 {
+  background-color: var(--golf-green-300);
+}
+
+.bg-golf-green-400 {
+  background-color: var(--golf-green-400);
+}
+
+.bg-golf-green-500 {
+  background-color: var(--golf-green-500);
+}
+
+.bg-golf-green-600 {
+  background-color: var(--golf-green-600);
+}
+
+.border-golf-green-400 {
+  border-color: var(--golf-green-400);
+}
+
+.from-golf-green-500 {
+  --tw-gradient-from: var(--golf-green-500);
+}
+
+.to-golf-green-600 {
+  --tw-gradient-to: var(--golf-green-600);
+}
+
+/* Focus States */
+.focus-golf {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(34, 197, 94, 0.6);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(34, 197, 94, 0.8);
+}
+
+/* Three.js Canvas Optimization */
+canvas {
+  display: block;
+  outline: none;
+}
+
+/* Loading Spinner */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Button Hover Effects */
+.btn-hover {
+  transition: all 0.3s ease;
+  transform: translateY(0);
+}
+
+.btn-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.btn-hover:active {
+  transform: translateY(0);
+}
+
+/* Form Input Styles */
+.input-glass {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s ease;
+}
+
+.input-glass:focus {
+  background: rgba(255, 255, 255, 0.15);
+  border-color: var(--golf-green-400);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+}
+
+.input-glass::placeholder {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Card Hover Effects */
+.card-hover {
+  transition: all 0.3s ease;
+  transform: scale(1);
+}
+
+.card-hover:hover {
+  transform: scale(1.02);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+/* Text Selection */
+::selection {
+  background: var(--golf-green-400);
+  color: white;
+}
+
+::-moz-selection {
+  background: var(--golf-green-400);
+  color: white;
+}
+
+/* Mobile Optimizations */
+@media (max-width: 768px) {
+  .animate-float {
+    animation-duration: 2s;
+  }
+  
+  canvas {
+    pointer-events: none;
+  }
+  
+  .glass {
+    backdrop-filter: blur(8px);
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .glass {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.4);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-float,
+  .animate-bounce,
+  .animate-pulse-slow,
+  .animate-bounce-slow {
+    animation: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+}
