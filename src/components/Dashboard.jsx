@@ -23,9 +23,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="relative w-full h-screen overflow-hidden bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200">
+    <div className="relative w-full h-screen overflow-auto bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200">
           {/* 3D Background */}
-          <div className="absolute inset-0">
+          <div className="fixed inset-0 w-full h-full">
             <ThreeScene className="w-full h-full" />
           </div>
       
@@ -36,22 +36,22 @@ export default function Dashboard() {
       <div className="relative z-10 pt-20 pb-8 px-4 sm:px-6 lg:px-8">
         <div className="max-w-6xl mx-auto">
           {/* Welcome Section */}
-          <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-darkgreen mb-4 font-game">
-              WELCOME BACK
+          <div className="text-center bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl mb-12">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-fuchsia-950 mb-4 font-game">
+              WELCOME
             </h1>
-            <h2 className="text-2xl md:text-3xl text-darkgreen/90 mb-2">
+            <h2 className="text-3xl md:text-5xl  font-game text-fuchsia-950 mb-2">
               {getDisplayName()}!
             </h2>
-            <p className="text-lg text-darkgreen/80">
-              Ready for your next golf adventure?
+            <p className="text-lg font-game text-fuchsia-950">
+              How's it goin bro?
             </p>
           </div>
 
           {/* Main Dashboard Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Enter Game Card */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-105">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-8 shadow-2xl hover:bg-white/15 transition-all duration-300 hover:scale-105">
               <div className="text-center">
                 <div className="w-16 h-16 bg-golf-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">⛳</span>
@@ -59,12 +59,12 @@ export default function Dashboard() {
                 <h3 className="text-xl font-bold text-white mb-2 font-game">
                   PLAY GOLF
                 </h3>
-                <p className="text-white/80 text-sm mb-4">
+                <p className="text-white text-sm mb-4">
                   Start a new round of minigolf
                 </p>
                 <button 
                   onClick={handleEnterGame}
-                  className="bg-gradient-to-r from-golf-green-500 to-emerald-500 text-white font-semibold py-3 px-6 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 hover:shadow-lg font-game"
+                  className="bg-gradient-to-r from-golf-green-800 to-emerald-800 text-white font-semibold py-3 px-6 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 hover:shadow-lg font-game"
                 >
                   ENTER GAME
                 </button>
@@ -72,7 +72,7 @@ export default function Dashboard() {
             </div>
 
             {/* Statistics Card */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl hover:bg-white/15 transition-all duration-300">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-8 shadow-2xl hover:bg-white/15 transition-all duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 bg-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">📊</span>
@@ -80,19 +80,19 @@ export default function Dashboard() {
                 <h3 className="text-xl font-bold text-white mb-2 font-game">
                   STATS
                 </h3>
-                <p className="text-white/80 text-sm mb-4">
+                <p className="text-white font-game text-sm mb-4">
                   View your game statistics
                 </p>
                 <div className="space-y-2 text-left">
-                  <div className="flex justify-between text-white/90 text-sm">
+                  <div className="flex justify-between font-game text-white/90 text-sm">
                     <span>Games Played:</span>
                     <span>0</span>
                   </div>
-                  <div className="flex justify-between text-white/90 text-sm">
+                  <div className="flex justify-between font-game text-white/90 text-sm">
                     <span>Best Score:</span>
                     <span>-</span>
                   </div>
-                  <div className="flex justify-between text-white/90 text-sm">
+                  <div className="flex justify-between font-game text-white/90 text-sm">
                     <span>Rank:</span>
                     <span>Unranked</span>
                   </div>
@@ -101,7 +101,7 @@ export default function Dashboard() {
             </div>
 
             {/* Leaderboard Card */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl hover:bg-white/15 transition-all duration-300">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-3xl p-8 shadow-2xl hover:bg-white/15 transition-all duration-300">
               <div className="text-center">
                 <div className="w-16 h-16 bg-yellow-500 rounded-full flex items-center justify-center mx-auto mb-4">
                   <span className="text-2xl">🏆</span>
@@ -109,10 +109,10 @@ export default function Dashboard() {
                 <h3 className="text-xl font-bold text-white mb-2 font-game">
                   LEADERBOARD
                 </h3>
-                <p className="text-white/80 text-sm mb-4">
+                <p className="text-white font-game text-sm mb-4">
                   Global rankings and tournaments
                 </p>
-                <button className="bg-white/20 backdrop-blur-sm border border-white/30 text-white font-semibold py-3 px-6 rounded-xl hover:bg-white/30 transition-all duration-300 hover:scale-105">
+                <button className="bg-gradient-to-r from-golf-green-800 to-emerald-800 text-white font-semibold py-3 px-6 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 hover:shadow-lg font-game">
                   VIEW RANKINGS
                 </button>
               </div>
@@ -120,13 +120,13 @@ export default function Dashboard() {
           </div>
 
           {/* Quick Actions */}
-          <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl">
+          <div className="bg-white/10 backdrop-blur-sm border border-white/20  rounded-3xl p-8 shadow-2xl">
             <h3 className="text-2xl font-bold text-white mb-6 font-game text-center">
-              QUICK ACTIONS
+              COMING SOON...
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {[
-                { icon: '🎮', label: 'Practice Mode', action: 'Coming Soon', onClick: null },
+                { icon: '🎮', label: 'Tutorial', action: 'Coming Soon', onClick: null },
                 { icon: '👥', label: 'Multiplayer', action: 'Coming Soon', onClick: null },
                 { icon: '🏅', label: 'Tournaments', action: 'Coming Soon', onClick: null },
                 { icon: '⚙️', label: 'Settings', action: 'Coming Soon', onClick: null }
@@ -135,11 +135,11 @@ export default function Dashboard() {
                   key={index}
                   onClick={item.onClick || undefined}
                   disabled={!item.onClick}
-                  className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105 text-center disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="bg-white/10 backdrop-blur-sm border border-white/20 p-4 rounded-xl hover:bg-white/20 transition-all duration-300 hover:scale-105 text-center disabled:opacity-65 disabled:cursor-not-allowed"
                 >
                   <div className="text-2xl mb-2">{item.icon}</div>
-                  <div className="text-white font-medium text-sm">{item.label}</div>
-                  <div className="text-white/60 text-xs mt-1">{item.action}</div>
+                  <div className="text-white font-game font-medium text-sm">{item.label}</div>
+                  <div className="text-white font-game text-xs mt-1">{item.action}</div>
                 </button>
               ))}
             </div>

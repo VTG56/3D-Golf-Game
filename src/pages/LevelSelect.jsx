@@ -50,7 +50,8 @@ export default function LevelSelect() {
       setPlayerProgress(progressData);
     } catch (error) {
       console.error('Error loading progress:', error);
-      toast.error('Failed to load progress data');
+      //toast.error('Failed to load progress data');
+      toast.error('WOrK iN pROgrESS');
       // Set empty progress as fallback
       setPlayerProgress({
         levelStats: {},
@@ -123,74 +124,74 @@ export default function LevelSelect() {
   return (
     <div className="relative w-full min-h-screen overflow-hidden bg-gradient-to-b from-sky-400 via-sky-300 to-emerald-200">
       {/* 3D Background */}
-      <div className="absolute inset-0">
-        <ThreeScene className="w-full h-full" />
-      </div>
+      <div className="fixed inset-0 h-full w-full">
+              <ThreeScene className="w-full h-full" />
+            </div>
 
       {/* Main Content */}
       <div className="relative z-10 min-h-screen">
         {/* Header */}
-        <div className="pt-8 pb-6 px-4 sm:px-6 lg:px-8">
+        <div className=" pb-6">
           {/* Navigation */}
-          <div className="max-w-6xl mx-auto flex items-center justify-between mb-8">
+          <div className="max-w-full min-h-16 text-2xl  mx-auto bg-blue-950 font-game flex items-center justify-between mb-8">
             <button
               onClick={() => navigate('/dashboard')}
-              className="flex items-center text-white/90 hover:text-white transition-colors duration-200 font-medium"
+              className="flex items-center text-golf-green-300 hover:text-white transition-colors duration-200 font-medium"
             >
-              <span className="mr-2">←</span>
+              <span className="mr-2 lg:ml-10">←</span>
               Back to Dashboard
             </button>
 
             {/* Player Info */}
             <div className="text-right">
-              <div className="text-white font-medium">{getDisplayName()}</div>
+              
               {user && user.isAnonymous && (
-                <div className="text-white/70 text-sm">Guest Mode</div>
+                <div className="text-golf-green-300 text-sm">Guest Mode</div>
               )}
             </div>
           </div>
 
           {/* Title Section */}
           <div className="max-w-6xl mx-auto text-center mb-8">
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 font-game">
+            <h1 className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 max-w-2xl mx-auto text-4xl md:text-5xl lg:text-6xl font-bold text-fuchsia-950 mb-4 font-game">
               SELECT LEVEL
             </h1>
             
             {/* Progress Summary */}
-            <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6 max-w-2xl mx-auto">
+            <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 max-w-2xl mx-auto">
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <div className="text-2xl font-bold text-yellow-400 font-game">
+                  <div className="text-2xl font-bold text-yellow-500 font-game">
                     {playerProgress?.totalStars || 0}
                   </div>
-                  <div className="text-white/80 text-sm">Stars Earned</div>
+                  <div className="text-fuchsia-950 font-game text-lg font-bold">Stars Earned</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-white font-game">
+                  <div className="text-2xl font-bold text-yellow-500 font-game">
                     {getTotalStarsAvailable()}
                   </div>
-                  <div className="text-white/80 text-sm">Total Stars</div>
+                  <div className="text-fuchsia-950 font-game font-bold text-lg">Total Stars</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-emerald-400 font-game">
+                  <div className="text-2xl font-bold text-yellow-500 font-game">
                     {levels.filter(level => isLevelUnlocked(level)).length}
                   </div>
-                  <div className="text-white/80 text-sm">Unlocked</div>
+                  <div className="text-fuchsia-950 font-game font-bold text-lg">Levels Unlocked</div>
                 </div>
               </div>
             </div>
 
             {/* Guest Mode Notice */}
             {user && user.isAnonymous && (
-              <div className="mt-4 bg-yellow-500/20 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 max-w-2xl mx-auto">
-                <div className="text-yellow-200 text-sm">
+              <div className="mt-4 bg-red-600 backdrop-blur-sm border border-yellow-500/30 rounded-xl p-4 max-w-2xl mx-auto">
+                <div className="text-yellow-200 font-game text-sm">
                   <strong>Playing as Guest:</strong> Progress is saved locally. 
                   <button 
                     onClick={() => navigate('/signup')} 
                     className="ml-1 underline hover:text-yellow-100"
                   >
                     Create account
-                  </button> to sync across devices.
+                  </button> to save progress.
                 </div>
               </div>
             )}
@@ -219,13 +220,13 @@ export default function LevelSelect() {
               {[1, 2, 3].map((i) => (
                 <div 
                   key={`coming-soon-${i}`}
-                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 text-center opacity-50"
+                  className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 text-center opacity-90"
                 >
                   <div className="text-white/50 mb-4">
                     <div className="text-4xl mb-2">🚧</div>
                     <div className="text-lg font-game">COMING SOON</div>
                   </div>
-                  <div className="text-white/40 text-sm">
+                  <div className="text-white/40 font-game text-sm">
                     More exciting levels in development!
                   </div>
                 </div>

@@ -62,7 +62,7 @@ export const levels = [
     holePosition: { x: 28, y: 0.5, z: -2 },
     holeRadius: 0.8,
     unlocked: false,
-    unlockCost: 5 // Costs 5 stars to unlock
+    unlockCost: 2 // Costs 5 stars to unlock
   },
   
   {
@@ -97,7 +97,7 @@ export const levels = [
     holePosition: { x: 38, y: 0.5, z: 2 },
     holeRadius: 0.8,
     unlocked: false,
-    unlockCost: 12 // Costs 12 stars to unlock
+    unlockCost: 5 // Costs 12 stars to unlock
   }
 ];
 

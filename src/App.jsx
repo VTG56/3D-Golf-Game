@@ -48,38 +48,70 @@ function GuestRoute({ children }) {
   // Allow access for both authenticated users and guests (including anonymous)
   return children;
 }
+const toasterStyle = `
+  .golf-toast {
+    animation: toast-enter 0.5s ease-out;
+  }
+
+  @keyframes toast-enter {
+    0% {
+      transform: scale(0.8) translateY(-20px);
+      opacity: 0;
+    }
+    100% {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+    }
+  }
+`;
 
 function App() {
   return (
     <AuthProvider>
       <Router>
         <div className="App">
-          {/* Global Toast Notifications */}
-          <Toaster 
-            position="top-center"
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: 'rgba(255, 255, 255, 0.1)',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                color: 'white',
-                borderRadius: '12px'
-              },
-              success: {
-                iconTheme: {
-                  primary: '#22c55e',
-                  secondary: 'white',
-                },
-              },
-              error: {
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: 'white',
-                },
-              },
-            }}
-          />
+          {/* Inject the CSS styles directly into the document head */}
+      <style>{toasterStyle}</style>
+
+      {/* --- The Toaster Component --- */}
+      <Toaster 
+        position="top-center"
+        toastOptions={{
+          // Add a className to target the toast with our CSS animation
+          className: 'golf-toast', 
+          
+          duration: 4000,
+          
+          // Default style for all toasts
+          style: {
+            background: '#15803d', // A nice, deep golf green
+            color: '#ffffff',
+            border: '2px solid #fde047', // A gold/yellow border
+            borderRadius: '50px', // Pill shape, looks more like a game UI
+            padding: '12px 20px',
+            fontFamily: 'font-game', // Your custom game font
+            fontSize: '16px',
+            boxShadow: '0 6px 20px rgba(0, 0, 0, 0.4)', // A prominent shadow
+          },
+
+          // --- Custom options for specific toast types ---
+          success: {
+            icon: '⛳️', // Use a golf emoji for success!
+            style: {
+              background: '#16a34a', // A slightly brighter green for success
+            },
+          },
+
+          error: {
+            icon: '😟', // Use a water hazard/warning emoji for errors
+            style: {
+              background: '#dc2626', // A strong red for errors
+              borderColor: '#fef2f2', // A light border for contrast
+            },
+          },
+        }}
+      />
+      {/* --- End of Toaster Component --- */}
           
           <Routes>
             {/* Public Routes */}

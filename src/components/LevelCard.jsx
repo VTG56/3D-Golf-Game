@@ -28,7 +28,7 @@ export default function LevelCard({
         {[...Array(total)].map((_, i) => (
           <div
             key={i}
-            className={`w-5 h-5 flex items-center justify-center ${
+            className={`w-5 h-5 font-game flex items-center justify-center ${
               i < earned 
                 ? 'text-yellow-400' 
                 : 'text-white/30'
@@ -68,7 +68,7 @@ export default function LevelCard({
         <div className="relative h-40 bg-gradient-to-br from-golf-green-400 to-emerald-600 overflow-hidden">
           {/* Placeholder for preview image */}
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-golf-green-500 to-emerald-700">
-            <div className="text-white/70 text-center">
+            <div className="text-white font-game text-center">
               <div className="text-4xl mb-2">🏌️</div>
               <div className="text-sm font-medium">{level.name}</div>
             </div>
@@ -76,12 +76,12 @@ export default function LevelCard({
           
           {/* Level Info Overlay */}
           <div className="absolute top-3 left-3 bg-black/50 backdrop-blur-sm rounded-lg px-3 py-1">
-            <div className="text-white text-sm font-medium">Par {level.par}</div>
+            <div className="text-white font-game text-sm font-medium">Par {level.par}</div>
           </div>
 
           {/* Difficulty Badge */}
           <div className={`
-            absolute top-3 right-3 px-2 py-1 rounded-lg text-xs font-medium
+            absolute top-3 font-game right-3 px-2 py-1 rounded-lg text-xs font-medium
             ${level.difficulty === 'easy' ? 'bg-green-500/80 text-white' : ''}
             ${level.difficulty === 'medium' ? 'bg-yellow-500/80 text-white' : ''}
             ${level.difficulty === 'hard' ? 'bg-red-500/80 text-white' : ''}
@@ -110,7 +110,7 @@ export default function LevelCard({
           </h3>
 
           {/* Description */}
-          <p className="text-white/80 text-sm mb-4 line-clamp-2">
+          <p className="text-white font-game text-sm mb-4 line-clamp-2">
             {level.description}
           </p>
 
@@ -118,12 +118,12 @@ export default function LevelCard({
           <div className="flex items-center justify-between mb-4">
             {/* Stars */}
             <div className="flex items-center space-x-2">
-              <span className="text-white/90 text-sm">Stars:</span>
+              <span className="text-yellow-200 font-game text-md">Stars:</span>
               {renderStars(levelStats.bestStars)}
             </div>
 
             {/* Best Score */}
-            <div className="text-white/90 text-sm">
+            <div className="text-white font-game text-md">
               {levelStats.bestStrokes ? (
                 <span>Best: {levelStats.bestStrokes}</span>
               ) : (
@@ -137,7 +137,7 @@ export default function LevelCard({
             {isUnlocked ? (
               <button
                 onClick={handlePlay}
-                className="flex-1 bg-gradient-to-r from-golf-green-500 to-emerald-500 text-white font-semibold py-3 px-4 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 font-game"
+                className="flex-1 bg-gradient-to-r from-golf-green-700 to-emerald-700 text-white font-semibold py-3 px-4 rounded-xl hover:from-golf-green-600 hover:to-emerald-600 transition-all duration-300 hover:scale-105 font-game"
               >
                 {levelStats.timesPlayed > 0 ? 'PLAY AGAIN' : 'PLAY'}
               </button>
@@ -199,7 +199,7 @@ export default function LevelCard({
               </button>
               <button
                 onClick={handleUnlock}
-                className="flex-1 bg-yellow-500 text-black font-semibold py-3 px-4 rounded-xl hover:bg-yellow-600 transition-all duration-300 font-game"
+                className="flex-1 bg-yellow-500  text-black font-semibold py-3 px-4 rounded-xl hover:bg-yellow-600 transition-all duration-300 font-game"
               >
                 UNLOCK
               </button>

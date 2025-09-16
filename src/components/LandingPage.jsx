@@ -13,7 +13,7 @@ export default function LandingPage() {
     try {
       setGuestLoading(true);
       await signInAsGuest();
-      navigate('/levels');
+      navigate('/dashboard');
     } catch (error) {
       console.error('Guest sign in failed:', error);
     } finally {
@@ -31,7 +31,7 @@ export default function LandingPage() {
       {/* Overlay Content */}
       <div className="relative z-10 flex flex-col items-center justify-start min-h-screen px-4 sm:px-6 lg:px-8">
         {/* Logo and Title */}
-        <div className="text-center mb-8 lg:mt-20 animate-float">
+        <div className="text-center mb-8 lg:mt-20 animate-float ">
           <div className="mb-6">
             {/* Game Logo - using CSS to create a blocky golf-themed design */}
             <div className="inline-block relative">
@@ -44,13 +44,14 @@ export default function LandingPage() {
               <div className="absolute -bottom-2 -left-2 w-6 h-6 bg-golf-green-400 rounded-full animate-bounce delay-150"></div>
             </div>
           </div>
-          
-          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-white font-semibold drop-shadow-lg mb-2 font-game">
+          <div className = "info bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl p-6 sm:p-8 shadow-2xl ">
+          <p className="text-lg sm:text-xl md:text-2xl lg:text-3xl text-fuchsia-950 font-semibold drop-shadow-lg mb-2 font-game">
             MINIGOLF REVAMPED
           </p>
-          <p className="text-base sm:text-lg md:text-xl text-white/90 drop-shadow-md font-medium">
+          <p className="text-base sm:text-lg md:text-xl text-fuchsia-950 font-game drop-shadow-md font-medium">
             Experience the ultimate 3D minigolf adventure
           </p>
+          </div>
         </div>
 
         {/* Action Buttons */}
@@ -60,8 +61,8 @@ export default function LandingPage() {
             to="/login"
             className="inline-block group relative overflow-hidden"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-golf-green-500 to-emerald-500 transform group-hover:scale-105 transition-transform duration-300 rounded-2xl blur-sm opacity-75"></div>
-            <div className="relative bg-white/10 backdrop-blur-md border font-game rounded-xl border-white/20  px-16 py-4 text-lg sm:text-xl md:text-2xl font-bold text-white shadow-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-3xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-rose-950 to-purple-900 transform group-hover:scale-105 transition-transform duration-300 rounded-2xl "></div>
+            <div className="relative  backdrop-blur-md border font-game rounded-xl border-white/20  px-16 py-4 text-lg sm:text-xl md:text-2xl font-bold text-white shadow-2xl hover:bg-white/20 transition-all duration-300 hover:scale-105 hover:shadow-3xl">
               <span className="flex items-center justify-center space-x-3">
                 <span>⛳</span>
                 <span>PLAY NOW</span>
@@ -77,8 +78,8 @@ export default function LandingPage() {
               disabled={guestLoading}
               className="block w-full max-w-md mx-auto group relative overflow-hidden"
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-purple-500 transform group-hover:scale-105 transition-transform duration-300 rounded-xl blur-sm opacity-60"></div>
-              <div className="relative bg-white/10 backdrop-blur-md border border-white/20 px-8 py-3 rounded-xl font-game text-lg md:text-xl font-semibold text-white shadow-xl hover:bg-white/20 transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed">
+              <div className="absolute inset-0 bg-gradient-to-r from-rose-950 to-purple-900 transform group-hover:scale-105 transition-transform duration-300 rounded-xl "></div>
+              <div className="relative  backdrop-blur-md border border-white/20 px-8 py-3 rounded-xl font-game text-lg md:text-xl font-semibold text-white shadow-xl hover:bg-white/20 transition-all duration-300 hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed">
                 {guestLoading ? (
                   <div className="flex items-center justify-center space-x-2">
                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -123,21 +124,21 @@ export default function LandingPage() {
         <div className="mt-8 flex flex-col  sm:flex-row items-center justify-center space-y-2 sm:space-y-0 sm:space-x-6 text-sm sm:text-base md:text-lg">
           <Link
             to="/login"
-            className="text-white/80 font-game px-10 py-3 hover:text-white bg-gradient-to-r from-blue-500 to-purple-500 transform group-hover:scale-105 transition-transform duration-300 rounded-xl  font-medium text-lg transition-colors duration-200 hover:underline underline-offset-4 hover:scale-125"
+            className="text-white/80 font-game px-10 py-3 hover:text-white bg-gradient-to-r from-rose-950 to-purple-900 transform group-hover:scale-105 transition-transform duration-300 rounded-xl  font-medium text-lg transition-colors duration-200 hover:underline underline-offset-4 hover:scale-125"
           >
             Login
           </Link>
           <span className="text-white/50">or</span>
           <Link
             to="/signup"
-            className="text-white/80 font-game px-8 py-3 hover:text-white bg-gradient-to-r from-blue-500 to-purple-500 transform group-hover:scale-105 transition-transform duration-300 rounded-xl  font-medium text-lg transition-colors duration-200 hover:underline underline-offset-4 hover:scale-125"
+            className="text-white/80 font-game px-8 py-3 hover:text-white bg-gradient-to-r from-rose-950 to-purple-900 transform group-hover:scale-105 transition-transform duration-300 rounded-xl  font-medium text-lg transition-colors duration-200 hover:underline underline-offset-4 hover:scale-125"
           >
             Sign Up
           </Link>
         
         </div>
         <footer className="mt-10 pb-5 sm:pb-2 md:pb-3 w-full text-center text-xs sm:text-sm text-white/70 font-game">
-  © CloneFest 2025 — All rights reserved ⛳
+  © CODEX FRIEZA 2025 
 </footer>
         
       </div>
