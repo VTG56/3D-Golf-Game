@@ -1,601 +1,335 @@
-// src/components/GameScene.jsx
-// Expected level prop structure:
-// {
-//   ballStart: { x, y, z },
-//   holePosition: { x, y, z },
-//   holeRadius: number,
-//   par: number,
-//   terrain: { 
-//     width, height, 
-//     slopes: [{ x, z, width, height, elevation }], 
-//     obstacles: [{ type:'tree', x, z, scale }] 
-//   },
-//   glbPath: string (optional)
-// }
-//
-// NOTE: Add CSS touch-action: none to canvas wrapper for smooth mobile dragging
-// Tuning constants: maxPower (12), goalSpeedThreshold (1.6), ballRadius (0.2)
-// For physics heightfield later: recommend converting plane to heightfield or baking simplified colliders
-
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
-import { Physics, useBox, useSphere, usePlane } from '@react-three/cannon';
-import { OrbitControls, Sky, Environment } from '@react-three/drei';
-import { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Canvas } from '@react-three/fiber';
+import { Physics } from '@react-three/cannon';
+import { Environment, Sky } from '@react-three/drei';
 import * as THREE from 'three';
 
-/* -------------------- GolfBall Component -------------------- */
-function GolfBall({ position, onPositionUpdate, onSpeedUpdate, ballApiRef }) {
-  const [ref, api] = useSphere(() => ({
-    mass: 1,
-    position,
-    args: [0.2], // ballRadius = 0.2
-    linearDamping: 0.4,
-    angularDamping: 0.4,
-    material: { friction: 0.3, restitution: 0.2 }
-  }));
+// Import modular components
+import GolfBall from './GolfBall';
+import Terrain from './Terrain';
+import Goal from './Goal';
+import CameraController from './CameraController';
 
-  const posRef = useRef([position[0], position[1], position[2]]);
-  const velRef = useRef([0, 0, 0]);
-  const draggingRef = useRef(false);
-  const dragStartRef = useRef(null);
-  const aimRef = useRef(null);
-  const { camera, raycaster, gl } = useThree();
-
-  // Expose API to parent
-  useEffect(() => {
-    if (ballApiRef) ballApiRef.current = api;
-  }, [api, ballApiRef]);
-
-  // Subscribe to physics updates
-  useEffect(() => {
-    const unsubPos = api.position.subscribe((p) => {
-      posRef.current = p;
-      onPositionUpdate({ x: p[0], y: p[1], z: p[2] });
-    });
-    const unsubVel = api.velocity.subscribe((v) => {
-      velRef.current = v;
-      const speed = Math.sqrt(v[0] ** 2 + v[1] ** 2 + v[2] ** 2);
-      onSpeedUpdate(speed);
-    });
-    return () => {
-      unsubPos();
-      unsubVel();
-    };
-  }, [api, onPositionUpdate, onSpeedUpdate]);
-
-  // Get world position from raycasting to the ground plane
-  const getWorldPosition = (clientX, clientY) => {
-    const canvas = gl.domElement;
-    const rect = canvas.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 2 - 1;
-    const y = -((clientY - rect.top) / rect.height) * 2 + 1;
-    
-    raycaster.setFromCamera({ x, y }, camera);
-    
-    // Create a large invisible plane for raycasting
-    const planeGeom = new THREE.PlaneGeometry(200, 200);
-    planeGeom.rotateX(-Math.PI / 2);
-    const planeMesh = new THREE.Mesh(planeGeom);
-    planeMesh.position.set(0, 0, 0);
-    
-    const intersects = raycaster.intersectObject(planeMesh);
-    
-    if (intersects.length > 0) {
-      return intersects[0].point;
-    }
-    
-    // Fallback: intersect with y=0 plane
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
-    const intersect = new THREE.Vector3();
-    raycaster.ray.intersectPlane(plane, intersect);
-    
-    return intersect;
-  };
-
-  // Mouse/touch input handlers
-  useEffect(() => {
-    const canvas = gl.domElement;
-    if (!canvas) return;
-
-    const handlePointerDown = (event) => {
-      const [vx, vy, vz] = velRef.current;
-      const speed = Math.sqrt(vx * vx + vy * vy + vz * vz);
-      
-      if (speed < 0.08) {
-        event.preventDefault();
-        event.stopPropagation();
-        
-        const worldPos = getWorldPosition(event.clientX, event.clientY);
-        if (worldPos) {
-          draggingRef.current = true;
-          dragStartRef.current = { x: worldPos.x, z: worldPos.z };
-          canvas.setPointerCapture(event.pointerId);
-        }
-      }
-    };
-
-    const handlePointerMove = (event) => {
-      if (!draggingRef.current || !dragStartRef.current) return;
-      
-      event.preventDefault();
-      event.stopPropagation();
-      
-      const worldPos = getWorldPosition(event.clientX, event.clientY);
-      if (worldPos) {
-        const dir = new THREE.Vector3(
-          worldPos.x - dragStartRef.current.x,
-          0,
-          worldPos.z - dragStartRef.current.z
-        );
-        // Only update if drag is meaningful
-        if (dir.length() > 0.05) {
-          aimRef.current = dir;
-        }
-      }
-    };
-
-    const handlePointerUp = (event) => {
-      if (!draggingRef.current) {
-        return;
-      }
-
-      event.preventDefault();
-      event.stopPropagation();
-      
-      if (aimRef.current && aimRef.current.length() > 0.1) {
-        const dir = aimRef.current;
-        const distance = Math.min(dir.length(), 4.0);
-        const maxPower = 15; // Tunable: max shot power
-        const power = (distance / 4.0) * maxPower;
-
-        // REVERSE LOGIC: drag back/left = shoot forward/right
-        // Invert the direction vector
-        const shot = dir.clone().normalize().multiplyScalar(-power);
-        
-        // Apply impulse instead of setting velocity directly
-        api.applyImpulse([shot.x, 1, shot.z], [0, 0, 0]);
-      }
-
-      draggingRef.current = false;
-      aimRef.current = null;
-      dragStartRef.current = null;
-      
-      if (canvas.hasPointerCapture && canvas.hasPointerCapture(event.pointerId)) {
-        canvas.releasePointerCapture(event.pointerId);
-      }
-    };
-
-    canvas.addEventListener('pointerdown', handlePointerDown);
-    canvas.addEventListener('pointermove', handlePointerMove);
-    canvas.addEventListener('pointerup', handlePointerUp);
-    canvas.addEventListener('pointercancel', handlePointerUp);
-
-    return () => {
-      canvas.removeEventListener('pointerdown', handlePointerDown);
-      canvas.removeEventListener('pointermove', handlePointerMove);  
-      canvas.removeEventListener('pointerup', handlePointerUp);
-      canvas.removeEventListener('pointercancel', handlePointerUp);
-    };
-  }, [camera, raycaster, api, gl]);
-
-  return (
-    <group>
-      <mesh ref={ref} castShadow receiveShadow>
-        <sphereGeometry args={[0.2, 16, 16]} />
-        <meshStandardMaterial color="#ffffff" roughness={0.3} metalness={0.1} />
-      </mesh>
-
-      {/* Aim indicator */}
-      {aimRef.current && draggingRef.current && (
-        <group position={[posRef.current[0], posRef.current[1] + 0.5, posRef.current[2]]}>
-          {/* Aim line - shows shot direction */}
-          <line>
-            <bufferGeometry>
-              <bufferAttribute
-                attach="attributes-position"
-                array={new Float32Array([
-                  0, 0, 0,
-                  aimRef.current.x * -0.5, 0, aimRef.current.z * -0.5
-                ])}
-                count={2}
-                itemSize={3}
-              />
-            </bufferGeometry>
-            <lineBasicMaterial color="#ff4444" />
-          </line>
-          
-          {/* Aim arrow - shows where ball will go (opposite of drag) */}
-          <mesh 
-            position={[aimRef.current.x * -0.5, 0, aimRef.current.z * -0.5]}
-            rotation={[0, Math.atan2(aimRef.current.x, aimRef.current.z), 0]}
-          >
-            <coneGeometry args={[0.08, 0.6, 8]} />
-            <meshBasicMaterial color="#ff4444" transparent opacity={0.8} />
-          </mesh>
-        </group>
-      )}
-    </group>
-  );
-}
-
-/* -------------------- Ground Plane -------------------- */
-function GroundPlane() {
-  const [ref] = usePlane(() => ({
-    type: 'Static',
-    rotation: [-Math.PI / 2, 0, 0],
-    position: [0, 0, 0],
-    material: { friction: 0.4, restitution: 0.1 }
-  }));
-
-  return (
-    <mesh ref={ref} receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]}>
-      <planeGeometry args={[100, 100]} />
-      <meshLambertMaterial color="#4ade80" />
-    </mesh>
-  );
-}
-
-/* -------------------- ProceduralTerrain -------------------- */
-function ProceduralTerrain({ level }) {
-  const geometry = useMemo(() => {
-    const { terrain } = level;
-    const width = terrain.width || 30;
-    const height = terrain.height || 30;
-    const geo = new THREE.PlaneGeometry(width, height, 128, 128);
-    const positions = geo.attributes.position.array;
-    
-    for (let i = 0; i < positions.length; i += 3) {
-      const x = positions[i];
-      const z = positions[i + 1];
-      let terrainHeight = 0;
-      
-      // Apply slope influences with smoother falloff
-      terrain.slopes?.forEach((slope) => {
-        const dx = x - slope.x;
-        const dz = z - slope.z;
-        const distance = Math.sqrt(dx * dx + dz * dz);
-        const maxDist = Math.max(slope.width, slope.height) * 0.7;
-        const influence = Math.max(0, Math.pow(1 - distance / maxDist, 2));
-        terrainHeight += slope.elevation * influence;
-      });
-      
-      // Add subtle noise for natural variation
-      const noiseScale = 0.1;
-      const noiseFreq = 0.05;
-      terrainHeight += Math.sin(x * noiseFreq) * Math.cos(z * noiseFreq) * noiseScale;
-      terrainHeight += (Math.random() - 0.5) * 0.05;
-      
-      positions[i + 2] = terrainHeight;
-    }
-    
-    geo.attributes.position.needsUpdate = true;
-    geo.computeVertexNormals();
-    return geo;
-  }, [level]);
-
-  return (
-    <mesh 
-      geometry={geometry} 
-      rotation={[-Math.PI / 2, 0, 0]} 
-      position={[0, 0.02, 0]}
-      receiveShadow
-    >
-      <meshLambertMaterial 
-        color="#2d5a2d" 
-        vertexColors={false}
-      />
-    </mesh>
-  );
-}
-
-/* -------------------- SlopeCollider -------------------- */
-function SlopeCollider({ x = 0, z = 0, width = 1, height = 1, elevation = 0.5 }) {
-  const yPos = elevation * 0.5;
-  const boxHeight = Math.abs(elevation) + 0.2;
-  
-  const [ref] = useBox(() => ({
-    type: 'Static',
-    position: [x, yPos, z],
-    args: [width, boxHeight * 0.5, height],
-    material: { friction: 0.4, restitution: 0.1 }
-  }));
-
-  return (
-    <mesh ref={ref} visible={false}>
-      <boxGeometry args={[width, boxHeight * 0.5, height]} />
-    </mesh>
-  );
-}
-
-/* -------------------- Goal Component -------------------- */
-function Goal({ position = [0, 0, 0], radius = 0.4, onGoal, ballPosRef, ballSpeed }) {
-  const triggeredRef = useRef(false);
-  
-  useFrame(() => {
-    if (!ballPosRef?.current || triggeredRef.current) return;
-    
-    const ball = ballPosRef.current;
-    const goalPos = new THREE.Vector3(position[0], position[1], position[2]);
-    const ballPos = new THREE.Vector3(ball.x, ball.y, ball.z);
-    const distance = goalPos.distanceTo(ballPos);
-    
-    const goalSpeedThreshold = 1.6; // Tunable: speed threshold for goal detection
-    if (distance <= radius && ballSpeed < goalSpeedThreshold) {
-      triggeredRef.current = true;
-      onGoal();
-    }
-  });
-
-  return (
-    <group position={position}>
-      {/* Hole */}
-      <mesh position={[0, 0.05, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <ringGeometry args={[0, radius, 32]} />
-        <meshBasicMaterial color="#000000" />
-      </mesh>
-      
-      {/* Hole depth */}
-      <mesh position={[0, -0.1, 0]}>
-        <cylinderGeometry args={[radius * 0.9, radius * 0.9, 0.2, 16]} />
-        <meshBasicMaterial color="#111111" />
-      </mesh>
-      
-      {/* Flag pole */}
-      <mesh position={[radius + 0.3, 1, 0]} castShadow>
-        <cylinderGeometry args={[0.015, 0.015, 2, 8]} />
-        <meshStandardMaterial color="#654321" />
-      </mesh>
-      
-      {/* Flag */}
-      <mesh position={[radius + 0.55, 1.7, 0]} castShadow>
-        <planeGeometry args={[0.4, 0.3]} />
-        <meshStandardMaterial color="#ff0000" side={THREE.DoubleSide} />
-      </mesh>
-    </group>
-  );
-}
-
-/* -------------------- Tree Component -------------------- */
-function Tree({ position = [0, 0, 0], scale = 1 }) {
-  const [trunkRef] = useBox(() => ({
-    type: 'Static',
-    position: [position[0], position[1] + 1 * scale, position[2]],
-    args: [0.3 * scale, 2 * scale, 0.3 * scale],
-    material: { friction: 0.6, restitution: 0.1 }
-  }));
-
-  return (
-    <group position={position} scale={scale}>
-      <mesh ref={trunkRef} position={[0, 1, 0]} castShadow>
-        <cylinderGeometry args={[0.15, 0.2, 2]} />
-        <meshStandardMaterial color="#654321" />
-      </mesh>
-      
-      <mesh position={[0, 2.5, 0]} castShadow>
-        <sphereGeometry args={[0.8, 8, 6]} />
-        <meshStandardMaterial color="#228b22" />
-      </mesh>
-    </group>
-  );
-}
-
-/* -------------------- Camera Controller -------------------- */
-function CameraController({ ballPosition, ballSpeed }) {
-  const { camera } = useThree();
-  const targetPos = useRef(new THREE.Vector3());
-  const currentPos = useRef(new THREE.Vector3());
-
-  useFrame(() => {
-    if (!ballPosition) return;
-
-    // Dynamic camera positioning based on ball speed
-    const baseDistance = ballSpeed > 1 ? 18 : 10;
-    const baseHeight = ballSpeed > 1 ? 12 : 6;
-    
-    // Smooth target positioning
-    targetPos.current.set(
-      ballPosition.x - baseDistance * 0.4,
-      ballPosition.y + baseHeight,
-      ballPosition.z - baseDistance * 0.3
-    );
-    
-    // Smooth camera movement
-    currentPos.current.copy(camera.position);
-    currentPos.current.lerp(targetPos.current, 0.08);
-    camera.position.copy(currentPos.current);
-    
-    // Look at ball with slight offset
-    camera.lookAt(ballPosition.x, ballPosition.y + 1, ballPosition.z);
-  });
-
-  return null;
-}
-
-/* -------------------- Main GameScene Component -------------------- */
 export default function GameScene({ level, onComplete }) {
-  const validatedLevel = useMemo(() => {
-    if (!level) {
-      return {
-        ballStart: { x: 0, y: 1, z: -8 },
-        holePosition: { x: 0, y: 0, z: 8 },
-        holeRadius: 0.6,
-        par: 3,
-        terrain: {
-          width: 30,
-          height: 30,
-          slopes: [
-            { x: 0, z: 0, width: 8, height: 8, elevation: 1 },
-            { x: 0, z: 4, width: 6, height: 6, elevation: -0.5 }
-          ],
-          obstacles: [
-            { type: 'tree', x: -3, z: 2, scale: 1 },
-            { type: 'tree', x: 4, z: -1, scale: 0.8 }
-          ]
-        }
-      };
-    }
-    
-    return {
-      ...level,
-      terrain: {
-        width: 30,
-        height: 30,
-        slopes: [],
-        obstacles: [],
-        ...level.terrain
-      }
-    };
-  }, [level]);
-
-  const ballApiRef = useRef(null);
-  const ballPosRef = useRef({ 
-    x: validatedLevel.ballStart.x, 
-    y: validatedLevel.ballStart.y, 
-    z: validatedLevel.ballStart.z 
-  });
-  const [ballSpeed, setBallSpeed] = useState(0);
+  // Game state
   const [strokes, setStrokes] = useState(0);
   const [gameStarted, setGameStarted] = useState(false);
-  const [startTime, setStartTime] = useState(null);
-  const [gameCompleted, setGameCompleted] = useState(false);
+  const [gameComplete, setGameComplete] = useState(false);
+  const [ballPosition, setBallPosition] = useState(level.ballStart);
+  const [ballSpeed, setBallSpeed] = useState(0);
+  const [timeTaken, setTimeTaken] = useState(0);
+  
+  // Refs for tracking
+  const ballRef = useRef();
+  const gameStartTime = useRef(null);
+  const gameTimer = useRef(null);
+  const completedRef = useRef(false);
 
-  const handlePositionUpdate = (position) => {
-    ballPosRef.current = position;
-  };
+  // Handle ball position updates
+  const handlePositionUpdate = useCallback((position) => {
+    setBallPosition({ x: position[0], y: position[1], z: position[2] });
+  }, []);
 
-  const handleSpeedUpdate = (speed) => {
-    const wasMoving = ballSpeed > 0.15;
-    const isMoving = speed > 0.15;
+  // Handle ball speed updates
+  const handleSpeedUpdate = useCallback((speed) => {
     setBallSpeed(speed);
-    
-    if (!wasMoving && isMoving) {
-      if (!gameStarted) {
-        setGameStarted(true);
-        setStartTime(Date.now());
-      }
-      setStrokes(prev => prev + 1);
-    }
-  };
+  }, []);
 
-  const handleGoal = () => {
-    if (gameCompleted) return;
-    setGameCompleted(true);
+  // Handle stroke (ball starts moving)
+  const handleStroke = useCallback(() => {
+    if (!gameStarted) {
+      setGameStarted(true);
+      gameStartTime.current = Date.now();
+      
+      // Start timer
+      gameTimer.current = setInterval(() => {
+        if (gameStartTime.current && !completedRef.current) {
+          setTimeTaken(Math.floor((Date.now() - gameStartTime.current) / 1000));
+        }
+      }, 1000);
+    }
     
-    const timeTaken = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0;
+    setStrokes(prev => prev + 1);
+  }, [gameStarted]);
+
+  // Handle goal completion
+  const handleGoal = useCallback(() => {
+    if (completedRef.current) return; // Prevent multiple calls
     
+    completedRef.current = true;
+    setGameComplete(true);
+    
+    // Stop timer
+    if (gameTimer.current) {
+      clearInterval(gameTimer.current);
+    }
+    
+    const finalTime = gameStartTime.current ? 
+      Math.floor((Date.now() - gameStartTime.current) / 1000) : 0;
+    
+    setTimeTaken(finalTime);
+
+    // Calculate stars earned based on strokes vs par
     let starsEarned = 0;
-    if (strokes <= validatedLevel.par - 2) starsEarned = 3;
-    else if (strokes <= validatedLevel.par - 1) starsEarned = 2;
-    else if (strokes <= validatedLevel.par + 1) starsEarned = 1;
+    const par = level.par || 3;
     
-    onComplete({
-      strokes,
-      starsEarned,
-      timeTaken,
-      par: validatedLevel.par
-    });
-  };
+    if (strokes <= par - 2) {
+      starsEarned = 3; // Eagle or better
+    } else if (strokes <= par - 1) {
+      starsEarned = 2; // Birdie
+    } else if (strokes <= par + 1) {
+      starsEarned = 1; // Par or bogey
+    } else {
+      starsEarned = 0; // Double bogey or worse
+    }
+
+    // Call completion callback with results
+    setTimeout(() => {
+      onComplete?.({
+        strokes,
+        starsEarned,
+        timeTaken: finalTime,
+        par: par
+      });
+    }, 1500); // Delay to show goal animation
+
+  }, [strokes, level.par, onComplete]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (gameTimer.current) {
+        clearInterval(gameTimer.current);
+      }
+    };
+  }, []);
+
+  // Reset function for restarting level
+  const resetLevel = useCallback(() => {
+    setStrokes(0);
+    setGameStarted(false);
+    setGameComplete(false);
+    setTimeTaken(0);
+    setBallSpeed(0);
+    completedRef.current = false;
+    
+    if (gameTimer.current) {
+      clearInterval(gameTimer.current);
+      gameTimer.current = null;
+    }
+    gameStartTime.current = null;
+
+    // Reset ball position and physics
+    if (ballRef.current) {
+      ballRef.current.position.set(
+        level.ballStart.x, 
+        level.ballStart.y, 
+        level.ballStart.z
+      );
+      ballRef.current.velocity.set(0, 0, 0);
+      ballRef.current.angularVelocity.set(0, 0, 0);
+    }
+    
+    setBallPosition(level.ballStart);
+  }, [level.ballStart]);
 
   return (
-    <Canvas 
-      shadows 
-      dpr={Math.min(window.devicePixelRatio, 1.5)}
-      camera={{ 
-        position: [
-          validatedLevel.ballStart.x - 10, 
-          validatedLevel.ballStart.y + 8, 
-          validatedLevel.ballStart.z - 8
-        ], 
-        fov: 60 
-      }}
-    >
-      <ambientLight intensity={0.5} />
-      <directionalLight 
-        position={[30, 30, 10]} 
-        intensity={1.2} 
-        castShadow
-        shadow-mapSize-width={2048}
-        shadow-mapSize-height={2048}
-        shadow-camera-far={100}
-        shadow-camera-left={-50}
-        shadow-camera-right={50}
-        shadow-camera-top={50}
-        shadow-camera-bottom={-50}
-      />
-      
-      <Sky sunPosition={[20, 20, 10]} />
-      <Environment preset="park" />
+    <div style={{ width: '100%', height: '100vh', position: 'relative' }}>
+      {/* HUD Overlay */}
+      <div style={{
+        position: 'absolute',
+        top: '20px',
+        left: '20px',
+        zIndex: 100,
+        background: 'rgba(0, 0, 0, 0.7)',
+        color: 'white',
+        padding: '15px',
+        borderRadius: '10px',
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '16px',
+        minWidth: '200px'
+      }}>
+        <div>Strokes: <strong>{strokes}</strong></div>
+        <div>Par: <strong>{level.par || 3}</strong></div>
+        {gameStarted && (
+          <div>Time: <strong>{Math.floor(timeTaken / 60)}:{(timeTaken % 60).toString().padStart(2, '0')}</strong></div>
+        )}
+        <div style={{ fontSize: '12px', marginTop: '5px', opacity: 0.8 }}>
+          Speed: {ballSpeed.toFixed(1)}
+        </div>
+      </div>
 
-      <Physics 
-        gravity={[0, -18, 0]} 
-        iterations={10} 
-        broadphase="SAP" 
-        allowSleep={true}
+      {/* Reset Button */}
+      <button
+        onClick={resetLevel}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          zIndex: 100,
+          background: '#ff6b6b',
+          color: 'white',
+          border: 'none',
+          padding: '10px 20px',
+          borderRadius: '5px',
+          cursor: 'pointer',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '14px'
+        }}
       >
-        <GroundPlane />
-        <ProceduralTerrain level={validatedLevel} />
+        Reset
+      </button>
 
-        {validatedLevel.terrain.slopes?.map((slope, index) => (
-          <SlopeCollider
-            key={`slope-${index}`}
-            x={slope.x}
-            z={slope.z}
-            width={slope.width}
-            height={slope.height}
-            elevation={slope.elevation}
-          />
-        ))}
+      {/* Goal Complete Overlay */}
+      {gameComplete && (
+        <div style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          zIndex: 200,
+          background: 'rgba(0, 0, 0, 0.9)',
+          color: 'white',
+          padding: '30px',
+          borderRadius: '15px',
+          textAlign: 'center',
+          fontFamily: 'Arial, sans-serif',
+          animation: 'fadeIn 0.5s ease-in'
+        }}>
+          <h2 style={{ margin: '0 0 20px 0', color: '#4CAF50' }}>Hole Complete!</h2>
+          <div style={{ fontSize: '18px', marginBottom: '10px' }}>
+            Strokes: <strong>{strokes}</strong> (Par {level.par || 3})
+          </div>
+          <div style={{ fontSize: '16px', marginBottom: '20px' }}>
+            Time: <strong>{Math.floor(timeTaken / 60)}:{(timeTaken % 60).toString().padStart(2, '0')}</strong>
+          </div>
+          <div style={{ fontSize: '24px' }}>
+            {'⭐'.repeat(Math.max(0, 
+              strokes <= (level.par || 3) - 2 ? 3 :
+              strokes <= (level.par || 3) - 1 ? 2 :
+              strokes <= (level.par || 3) + 1 ? 1 : 0
+            ))}
+          </div>
+        </div>
+      )}
 
-        {validatedLevel.terrain.obstacles?.map((obstacle, index) => {
-          if (obstacle.type === 'tree') {
-            return (
-              <Tree
-                key={`tree-${index}`}
-                position={[obstacle.x, 0, obstacle.z]}
-                scale={obstacle.scale || 1}
-              />
-            );
-          }
-          return null;
-        })}
+      {/* Instructions Overlay (only show before first stroke) */}
+      {!gameStarted && (
+        <div style={{
+          position: 'absolute',
+          bottom: '20px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 100,
+          background: 'rgba(0, 0, 0, 0.7)',
+          color: 'white',
+          padding: '15px',
+          borderRadius: '10px',
+          textAlign: 'center',
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '14px',
+          maxWidth: '300px'
+        }}>
+          <div style={{ marginBottom: '5px' }}>🏌️ Drag the ball to aim</div>
+          <div>Release to shoot!</div>
+        </div>
+      )}
 
-        <GolfBall
-          position={[
-            validatedLevel.ballStart.x,
-            validatedLevel.ballStart.y,
-            validatedLevel.ballStart.z
-          ]}
-          onPositionUpdate={handlePositionUpdate}
-          onSpeedUpdate={handleSpeedUpdate}
-          ballApiRef={ballApiRef}
+      {/* 3D Canvas Scene */}
+      <Canvas
+        shadows
+        camera={{ 
+          position: [level.ballStart.x - 5, level.ballStart.y + 4, level.ballStart.z],
+          fov: 75,
+          near: 0.1,
+          far: 100
+        }}
+        style={{ background: 'linear-gradient(to bottom, #87CEEB, #98FB98)' }}
+        onPointerMissed={() => {
+          // Handle clicks outside of objects
+        }}
+      >
+        {/* Lighting Setup */}
+        <ambientLight intensity={0.6} />
+        <directionalLight
+          position={[10, 20, 5]}
+          intensity={1}
+          castShadow
+          shadow-mapSize-width={2048}
+          shadow-mapSize-height={2048}
+          shadow-camera-far={50}
+          shadow-camera-left={-20}
+          shadow-camera-right={20}
+          shadow-camera-top={20}
+          shadow-camera-bottom={-20}
+        />
+        
+        {/* Sky Environment */}
+        <Sky 
+          sunPosition={[100, 20, 100]}
+          inclination={0.6}
+          azimuth={0.25}
         />
 
-        <Goal
-          position={[
-            validatedLevel.holePosition.x,
-            validatedLevel.holePosition.y,
-            validatedLevel.holePosition.z
-          ]}
-          radius={validatedLevel.holeRadius}
-          onGoal={handleGoal}
-          ballPosRef={ballPosRef}
+        {/* Physics World */}
+        <Physics 
+          gravity={[0, -30, 0]}  // Stronger gravity
+          defaultContactMaterial={{
+            friction: 0.4,
+            restitution: 0.3,
+          }}
+          tolerance={0.001}
+          iterations={20}
+        >
+          {/* Terrain */}
+          <Terrain level={level} />
+
+          {/* Golf Ball */}
+          <GolfBall
+            position={[level.ballStart.x, level.ballStart.y, level.ballStart.z]}
+            onPositionUpdate={handlePositionUpdate}
+            onSpeedUpdate={handleSpeedUpdate}
+            onStroke={handleStroke}
+            ballRef={ballRef}
+          />
+
+          {/* Goal */}
+          <Goal
+            position={[level.holePosition.x, level.holePosition.y, level.holePosition.z]}
+            radius={level.holeRadius || 0.5}
+            onGoal={handleGoal}
+          />
+        </Physics>
+
+        {/* Camera Controller */}
+        <CameraController
+          ballPosition={ballPosition}
           ballSpeed={ballSpeed}
         />
-      </Physics>
 
-      <CameraController 
-        ballPosition={ballPosRef.current} 
-        ballSpeed={ballSpeed} 
-      />
-      
-      <OrbitControls 
-        enabled={ballSpeed < 0.15 && !gameCompleted} 
-        enablePan={false}
-        maxDistance={30}
-        minDistance={5}
-        maxPolarAngle={Math.PI * 0.4}
-        minPolarAngle={Math.PI * 0.1}
-      />
-    </Canvas>
+        {/* Environment Effects */}
+        <Environment preset="park" />
+        
+        {/* Fog for depth */}
+        <fog attach="fog" args={['#87CEEB', 30, 100]} />
+      </Canvas>
+
+      {/* CSS Animation Styles */}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+          to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        
+        button:hover {
+          background: #ff5252 !important;
+          transform: scale(1.05);
+        }
+        
+        button:active {
+          transform: scale(0.95);
+        }
+      `}</style>
+    </div>
   );
 }
