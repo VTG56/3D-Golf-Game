@@ -1,15 +1,18 @@
-import React, { Suspense, useState, useRef, useEffect } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";   // <-- ✅ include useFrame here
+import React, { Suspense, useState, useEffect } from "react";
+import { Canvas, useFrame } from "@react-three/fiber";
 import { OrbitControls, Environment, Text } from "@react-three/drei";
 import { Vector3 } from "three";
 import { useParams, useNavigate } from "react-router-dom";
-import levels from "../utils/levels";   // ✅ adjust path depending on your folder
+import levels, { calculateStars, getNextLevel } from "../utils/levels";
+import EndOfRound from "../components/EndOfRound";
+import { useAuth } from "../hooks/useAuth";
+import { useProgress } from "../hooks/useProgress";
 
-// Golf Ball Component
+// ---------------- Golf Ball ----------------
 function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving }) {
   const ballRef = React.useRef();
 
-  useFrame((state, delta) => {
+  useFrame((_, delta) => {
     if (!ballRef.current || !isMoving) return;
 
     const newPos = position.clone().add(velocity.clone().multiplyScalar(delta));
@@ -45,7 +48,7 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving 
   );
 }
 
-// Golf Course
+// ---------------- Golf Course ----------------
 function GolfCourse() {
   return (
     <group>
@@ -73,7 +76,7 @@ function GolfCourse() {
   );
 }
 
-// Power Meter
+// ---------------- Power Meter ----------------
 function PowerMeter({ power, maxPower }) {
   return (
     <div className="absolute bottom-20 left-4 bg-black/50 p-4 rounded-lg">
@@ -89,22 +92,35 @@ function PowerMeter({ power, maxPower }) {
   );
 }
 
-// Main Game
+// ---------------- Main Game ----------------
 function Game() {
-  const { id } = useParams();
+  const { levelId } = useParams();
   const navigate = useNavigate();
-  const level = levels[id - 1];
+  const { user } = useAuth();
+  const { setProgress, getGuestId } = useProgress();
+
+  const level = levels.find((lvl) => lvl.id === parseInt(levelId));
+  if (!level) return <div>Invalid level</div>;
 
   const [gameStarted, setGameStarted] = useState(false);
-  const [ballPosition, setBallPosition] = useState(new Vector3(-8, 0.1, 0));
+  const [ballPosition, setBallPosition] = useState(new Vector3(level.ballStart.x, level.ballStart.y, level.ballStart.z));
   const [ballVelocity, setBallVelocity] = useState(new Vector3(0, 0, 0));
   const [isMoving, setIsMoving] = useState(false);
   const [power, setPower] = useState(0);
   const [isCharging, setIsCharging] = useState(false);
   const [shots, setShots] = useState(0);
   const [gameWon, setGameWon] = useState(false);
+  const [showEndScreen, setShowEndScreen] = useState(false);
+  const [starsEarned, setStarsEarned] = useState(0);
+  const [timeTaken, setTimeTaken] = useState(0);
+  const [startTime, setStartTime] = useState(null);
 
   const maxPower = 15;
+
+  // Start timer
+  useEffect(() => {
+    if (gameStarted) setStartTime(Date.now());
+  }, [gameStarted]);
 
   // Power charging
   useEffect(() => {
@@ -117,9 +133,30 @@ function Game() {
 
   // Check win
   useEffect(() => {
-    const hole = new Vector3(8, 0.1, 0);
-    if (ballPosition.distanceTo(hole) < 0.4 && !isMoving) {
+    const hole = new Vector3(level.holePosition.x, level.holePosition.y, level.holePosition.z);
+    if (ballPosition.distanceTo(hole) < level.holeRadius && !isMoving && !gameWon) {
       setGameWon(true);
+
+      // Calculate results
+      const time = Math.floor((Date.now() - startTime) / 1000);
+      const stars = calculateStars(shots, level.par);
+      setTimeTaken(time);
+      setStarsEarned(stars);
+
+      // Save progress
+      const uid = user && !user.isAnonymous ? user.uid : null;
+      const guestId = !uid ? getGuestId() : null;
+
+      setProgress({
+        uid,
+        guestId,
+        levelId: level.id,
+        strokes: shots,
+        stars,
+        timeTaken: time,
+      });
+
+      setTimeout(() => setShowEndScreen(true), 1000); // delay for effect
     }
   }, [ballPosition, isMoving]);
 
@@ -133,7 +170,7 @@ function Game() {
     if (!isCharging || isMoving || gameWon) return;
     setIsCharging(false);
 
-    const hole = new Vector3(8, 0, 0);
+    const hole = new Vector3(level.holePosition.x, 0, level.holePosition.z);
     const dir = hole.clone().sub(ballPosition).normalize();
 
     const shotVelocity = dir.multiplyScalar(power * 0.8);
@@ -146,13 +183,32 @@ function Game() {
   };
 
   const resetGame = () => {
-    setBallPosition(new Vector3(-8, 0.1, 0));
+    setBallPosition(new Vector3(level.ballStart.x, level.ballStart.y, level.ballStart.z));
     setBallVelocity(new Vector3(0, 0, 0));
     setIsMoving(false);
     setPower(0);
     setIsCharging(false);
     setShots(0);
     setGameWon(false);
+    setShowEndScreen(false);
+    setStarsEarned(0);
+    setTimeTaken(0);
+    setStartTime(Date.now());
+  };
+
+  // Navigation
+  const handleNextLevel = () => {
+    const next = getNextLevel(level.id);
+    if (next) {
+      navigate(`/game/${next.id}`);
+      window.location.reload(); // reload to reset state
+    } else {
+      navigate("/levels");
+    }
+  };
+
+  const handleBackToLevels = () => {
+    navigate("/levels");
   };
 
   if (!gameStarted) {
@@ -179,6 +235,19 @@ function Game() {
     );
   }
 
+  if (showEndScreen) {
+    return (
+      <EndOfRound
+        strokes={shots}
+        starsEarned={starsEarned}
+        timeTaken={timeTaken}
+        par={level.par}
+        onNextLevel={handleNextLevel}
+        onBackToLevels={handleBackToLevels}
+      />
+    );
+  }
+
   return (
     <div className="w-full h-screen relative">
       <Canvas shadows camera={{ position: [-5, 8, 8], fov: 60 }}>
@@ -201,7 +270,6 @@ function Game() {
       {/* UI */}
       <div className="absolute top-4 left-4 bg-black/50 text-white p-4 rounded-lg">
         <div>Shots: {shots}</div>
-        {gameWon && <div className="text-green-400 font-bold">Hole in {shots}!</div>}
       </div>
 
       <div className="absolute top-4 right-4">
