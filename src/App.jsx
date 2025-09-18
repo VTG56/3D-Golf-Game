@@ -234,6 +234,8 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+            <Route path="/game/:levelId" element={<Game />} />
+
             
             {/* 404 Route */}
             <Route 
