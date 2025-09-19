@@ -115,6 +115,10 @@ function Game() {
   const [timeTaken, setTimeTaken] = useState(0);
   const [startTime, setStartTime] = useState(null);
 
+  // NEW: Direction states
+  const [isSettingDirection, setIsSettingDirection] = useState(false);
+  const [directionAngle, setDirectionAngle] = useState(0); // radians
+
   const maxPower = 15;
 
   // Start timer
@@ -160,6 +164,29 @@ function Game() {
     }
   }, [ballPosition, isMoving]);
 
+  // --- Direction toggle ---
+  const toggleDirectionMode = () => {
+    setIsSettingDirection((prev) => !prev);
+  };
+
+  // --- Handle arrow keys while setting direction ---
+  useEffect(() => {
+    if (!isSettingDirection) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "ArrowLeft") {
+        setDirectionAngle((a) => a - 0.1);
+      }
+      if (e.key === "ArrowRight") {
+        setDirectionAngle((a) => a + 0.1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isSettingDirection]);
+
+  // --- Shooting ---
   const handleMouseDown = () => {
     if (isMoving || gameWon) return;
     setIsCharging(true);
@@ -170,8 +197,10 @@ function Game() {
     if (!isCharging || isMoving || gameWon) return;
     setIsCharging(false);
 
-    const hole = new Vector3(level.holePosition.x, 0, level.holePosition.z);
-    const dir = hole.clone().sub(ballPosition).normalize();
+    // use chosen direction vector
+    const dir = new Vector3(Math.cos(directionAngle), 0, Math.sin(directionAngle));
+
+
 
     const shotVelocity = dir.multiplyScalar(power * 0.8);
     shotVelocity.y = power * 0.1;
@@ -201,7 +230,7 @@ function Game() {
     const next = getNextLevel(level.id);
     if (next) {
       navigate(`/game/${next.id}`);
-      window.location.reload(); // reload to reset state
+      window.location.reload();
     } else {
       navigate("/levels");
     }
@@ -262,9 +291,36 @@ function Game() {
             isMoving={isMoving}
             setIsMoving={setIsMoving}
           />
+
+          {/* Direction Needle (flat arrow) */}
+          {isSettingDirection && (
+            <group
+              position={[ballPosition.x, ballPosition.y + 0.1, ballPosition.z]}
+              rotation={[0, directionAngle, 0]} // rotate around Y
+            >
+              {/* Shaft (flat box) */}
+              <mesh position={[0.5, 0, 0]}>
+                <boxGeometry args={[1, 0.02, 0.05]} />
+                <meshStandardMaterial color="red" />
+              </mesh>
+
+              {/* Arrow head (triangle/cone lying flat) */}
+              <mesh position={[1.1, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
+                <coneGeometry args={[0.15, 0.3, 8]} />
+                <meshStandardMaterial color="red" />
+              </mesh>
+            </group>
+          )}
+
           <Environment preset="sunset" />
         </Suspense>
-        <OrbitControls enablePan={false} minDistance={5} maxDistance={20} maxPolarAngle={Math.PI / 2.2} />
+        <OrbitControls
+          enablePan={false}
+          minDistance={5}
+          maxDistance={20}
+          maxPolarAngle={Math.PI / 2.2}
+          enabled={!isSettingDirection}
+        />
       </Canvas>
 
       {/* UI */}
@@ -272,12 +328,18 @@ function Game() {
         <div>Shots: {shots}</div>
       </div>
 
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 flex gap-2">
         <button
           onClick={resetGame}
           className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
         >
           Reset
+        </button>
+        <button
+          onClick={toggleDirectionMode}
+          className={`px-4 py-2 ${isSettingDirection ? "bg-yellow-500" : "bg-blue-500"} text-white rounded-lg`}
+        >
+          {isSettingDirection ? "Confirm Direction" : "Set Direction"}
         </button>
       </div>
 
@@ -296,7 +358,7 @@ function Game() {
       )}
 
       <div className="absolute bottom-4 right-4 bg-black/50 text-white p-2 rounded text-sm">
-        Drag to rotate camera • Mouse wheel to zoom
+        {isSettingDirection ? "← → to adjust direction" : "Drag to rotate camera • Mouse wheel to zoom"}
       </div>
     </div>
   );
