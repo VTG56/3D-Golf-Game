@@ -45,9 +45,15 @@ function Windmill({ obs }) {
   );
 }
 
-
-function FollowBallCamera({ ballPosition, ballVelocity, holePosition, isSettingDirection, directionAngle }) {
-  const { controls, camera } = useThree();
+function FollowBallCamera({
+  ballPosition,
+  ballVelocity,
+  holePosition,
+  isSettingDirection,
+  directionAngle,
+  userInteractingRef,
+}) {
+  const { controls, camera, gl } = useThree();
   const initialized = React.useRef(false);
 
   useFrame(() => {
@@ -55,44 +61,52 @@ function FollowBallCamera({ ballPosition, ballVelocity, holePosition, isSettingD
 
     const speed = ballVelocity.length();
 
-    // Only auto-follow if the ball is moving
-    if (speed > 0.05) {
-      if (!initialized.current) {
-        // Initial setup: camera behind ball facing hole
-        const dir = new Vector3().subVectors(holePosition, ballPosition).normalize();
-        const camPos = ballPosition.clone().add(dir.clone().multiplyScalar(-8)).setY(ballPosition.y + 5);
-        camera.position.copy(camPos);
-        camera.lookAt(holePosition);
-        initialized.current = true;
-      }
+    // --- 1. Initial alignment (only ONCE when game starts or resets) ---
+    if (!initialized.current) {
+      const dir = new Vector3().subVectors(holePosition, ballPosition).normalize();
+      const camPos = ballPosition.clone().add(dir.clone().multiplyScalar(-8)).setY(ballPosition.y + 5);
 
-      // Smooth follow when ball is moving
+      camera.position.copy(camPos);
+      camera.lookAt(holePosition);
+
+      controls.target.copy(holePosition);
+      controls.update();
+
+      initialized.current = true; // ✅ only once at start/reset
+    }
+
+    // --- 2. Follow the ball while it is moving ---
+    if (speed > 0.05 && !userInteractingRef.current && !isSettingDirection) {
       controls.target.lerp(ballPosition, 0.1);
 
-      const desiredDistance = Math.min(Math.max(8 + speed * 0.5, 6), 18);
+      const desiredDistance = Math.min(Math.max(8 + speed * 0.5, 6), 30);
       const direction = new Vector3();
       camera.getWorldDirection(direction);
       const newPos = ballPosition.clone().sub(direction.multiplyScalar(desiredDistance));
-      camera.position.lerp(newPos, 0.05);
 
+      camera.position.lerp(newPos, 0.05);
       controls.update();
     }
   });
 
-  // While setting direction, snap behind chosen direction (but not forcing constantly)
+  // --- 3. Handle direction setting mode (DO NOT snap to hole here) ---
   useEffect(() => {
     if (isSettingDirection) {
       const dir = new Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle)).normalize();
       const camPos = ballPosition.clone().add(dir.clone().multiplyScalar(-8)).setY(ballPosition.y + 5);
+
       camera.position.copy(camPos);
       camera.lookAt(ballPosition.clone().add(dir.clone().multiplyScalar(10)));
+      controls.target.copy(ballPosition);
+      controls.update();
     }
-  }, [isSettingDirection, directionAngle, ballPosition]);
+    // 🚨 Notice: no goal alignment here!
+  }, [isSettingDirection, directionAngle, ballPosition.x, ballPosition.y, ballPosition.z]);
 
-  // Reset when ball resets
+  // --- 4. Reset initial alignment ONLY when ball resets ---
   useEffect(() => {
     initialized.current = false;
-  }, [ballPosition]);
+  }, [ballPosition.x, ballPosition.y, ballPosition.z]);
 
   return null;
 }
@@ -451,6 +465,8 @@ function Game() {
   const [starsEarned, setStarsEarned] = useState(0);
   const [timeTaken, setTimeTaken] = useState(0);
   const [startTime, setStartTime] = useState(null);
+  // inside Game()
+  const userInteractingRef = React.useRef(false);
 
   // NEW: Direction states
   const [isSettingDirection, setIsSettingDirection] = useState(false);
@@ -646,13 +662,14 @@ useEffect(() => {
         <Suspense fallback={null}>
         <GolfCourse level={level} />
         <FollowBallCamera
-  ballPosition={ballPosition}
-  ballVelocity={ballVelocity}
-  holePosition={new Vector3(level.holePosition.x, level.holePosition.y, level.holePosition.z)}
-  isSettingDirection={isSettingDirection}
-  directionAngle={directionAngle}
-  enableFollow={!isSettingDirection && isMoving} // new prop
-/>
+          ballPosition={ballPosition}
+          ballVelocity={ballVelocity}
+          holePosition={new Vector3(level.holePosition.x, level.holePosition.y, level.holePosition.z)}
+          isSettingDirection={isSettingDirection}
+          directionAngle={directionAngle}
+          userInteractingRef={userInteractingRef}
+        />
+
 
 
 
@@ -715,10 +732,13 @@ useEffect(() => {
           enablePan={true}
           enableZoom={true}
           minDistance={2}
-          maxDistance={20}
+          maxDistance={60}            // allow farther zoom-out
+          enableDamping
+          dampingFactor={0.07}
           maxPolarAngle={Math.PI / 2.2}
           enabled={true}
         />
+
               </Canvas>
 
       {/* UI */}
