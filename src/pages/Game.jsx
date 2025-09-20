@@ -378,14 +378,14 @@ function GolfCourse({ level }) {
 function PowerMeter({ power, maxPower }) {
   return (
     <div className="absolute bottom-20 left-4 bg-black/50 p-4 rounded-lg">
-      <div className="text-white mb-2">Power</div>
+      <div className="text-white font-game mb-2">Power</div>
       <div className="w-4 h-32 bg-gray-700 rounded">
         <div
-          className="w-full bg-gradient-to-t from-green-500 via-yellow-500 to-red-500 rounded transition-all duration-100"
+          className="w-full bg-gradient-to-t from-green-500 via-yellow-500 to-red-500  rounded transition-all duration-100"
           style={{ height: `${(power / maxPower) * 100}%` }}
         />
       </div>
-      <div className="text-white text-sm mt-1">{Math.round(power)}</div>
+      <div className="text-white font-game text-sm mt-1">{Math.round(power)}</div>
     </div>
   );
 }
@@ -558,7 +558,7 @@ function Game() {
           </Canvas>
           <button
             onClick={() => setGameStarted(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-xl rounded-lg"
+            className="bg-blue-600 font-game hover:bg-blue-700 text-white px-8 py-4 text-xl rounded-lg"
           >
             PLAY
           </button>
@@ -582,7 +582,7 @@ function Game() {
 
   return (
     <div className="w-full h-screen relative">
-      <Canvas shadows camera={{  fov: 0 }}>
+      <Canvas shadows camera={{  fov: 60 }}>
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
         <Suspense fallback={null}>
@@ -633,20 +633,20 @@ function Game() {
       </Canvas>
 
       {/* UI */}
-      <div className="absolute top-4 left-4 bg-black/50 text-white p-4 rounded-lg">
+      <div className="absolute font-game top-4 left-4 bg-black/50 text-white p-4 rounded-lg">
         <div>Shots: {shots}</div>
       </div>
 
       <div className="absolute top-4 right-4 flex gap-2">
         <button
           onClick={resetGame}
-          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
+          className="px-4 py-2 font-game bg-red-500 hover:bg-red-600 text-white rounded-lg"
         >
           Reset
         </button>
         <button
           onClick={toggleDirectionMode}
-          className={`px-4 py-2 ${isSettingDirection ? "bg-yellow-500" : "bg-blue-500"} text-white rounded-lg`}
+          className={`px-4 py-2 ${isSettingDirection ? "bg-yellow-500" : "bg-blue-500"} text-white font-game rounded-lg`}
         >
           {isSettingDirection ? "Confirm Direction" : "Set Direction"}
         </button>
