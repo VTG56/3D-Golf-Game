@@ -46,16 +46,62 @@ function Windmill({ obs }) {
 }
 
 
-function FollowBallCamera({ ballPosition }) {
-  const { controls } = useThree();
+function FollowBallCamera({ ballPosition, ballVelocity, holePosition, isSettingDirection, directionAngle }) {
+
+  const { controls, camera } = useThree();
+  const initialized = React.useRef(false);
 
   useFrame(() => {
     if (controls) {
-      // Always center orbit controls on the ball
-      controls.target.lerp(ballPosition, 0.1); // smooth follow
+      // --- On first render or reset, set camera behind ball facing hole ---
+      if (!initialized.current) {
+        const ballVec = ballPosition.clone();
+        const holeVec = holePosition.clone();
+
+        // Direction from ball → hole
+        const dir = new Vector3().subVectors(holeVec, ballVec).normalize();
+
+        // Place camera behind the ball
+        const camPos = ballVec.clone().add(dir.clone().multiplyScalar(-8)).setY(ballVec.y + 5);
+
+        camera.position.copy(camPos);
+        camera.lookAt(holeVec);
+
+        initialized.current = true;
+      }
+
+      // --- Normal follow behaviour (zoom & smooth move) ---
+      controls.target.lerp(ballPosition, 0.1);
+
+      const speed = ballVelocity.length();
+      const desiredDistance = Math.min(Math.max(8 + speed * 0.5, 6), 18);
+
+      const direction = new Vector3();
+      camera.getWorldDirection(direction);
+      const newPos = ballPosition.clone().sub(direction.multiplyScalar(desiredDistance));
+
+      camera.position.lerp(newPos, 0.05);
+
       controls.update();
     }
   });
+  useEffect(() => {
+  if (!isSettingDirection) {
+    const ballVec = ballPosition.clone();
+    const dir = new Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle)).normalize();
+
+    // Place camera slightly behind ball in opposite of chosen direction
+    const camPos = ballVec.clone().add(dir.clone().multiplyScalar(-8)).setY(ballVec.y + 5);
+
+    camera.position.copy(camPos);
+    camera.lookAt(ballVec.clone().add(dir.clone().multiplyScalar(10))); // look forward in chosen direction
+  }
+}, [isSettingDirection, directionAngle]);
+
+  // Reset camera whenever ball resets
+  useEffect(() => {
+    initialized.current = false;
+  }, [ballPosition]);
 
   return null;
 }
@@ -379,9 +425,9 @@ function PowerMeter({ power, maxPower }) {
   return (
     <div className="absolute bottom-20 left-4 bg-black/50 p-4 rounded-lg">
       <div className="text-white font-game mb-2">Power</div>
-      <div className="w-4 h-32 bg-gray-700 rounded">
+      <div className="w-4 h-32 bg-gray-700 rounded flex flex-col justify-end">
         <div
-          className="w-full bg-gradient-to-t from-green-500 via-yellow-500 to-red-500  rounded transition-all duration-100"
+          className="w-full bg-gradient-to-t from-red-500 via-yellow-500 to-green-500 rounded transition-all duration-100"
           style={{ height: `${(power / maxPower) * 100}%` }}
         />
       </div>
@@ -389,6 +435,7 @@ function PowerMeter({ power, maxPower }) {
     </div>
   );
 }
+
 
 // ---------------- Main Game ----------------
 function Game() {
@@ -424,19 +471,38 @@ function Game() {
     setIsMoving(false);
     setShots((s) => s + 1); // penalty stroke
   };
+  
   // Start timer
   useEffect(() => {
     if (gameStarted) setStartTime(Date.now());
   }, [gameStarted]);
 
   // Power charging
-  useEffect(() => {
-    if (!isCharging) return;
-    const interval = setInterval(() => {
-      setPower((prev) => (prev + 0.5 > maxPower ? 0 : prev + 0.5));
-    }, 50);
-    return () => clearInterval(interval);
-  }, [isCharging]);
+// Power charging (oscillates between 0 ↔ maxPower)
+useEffect(() => {
+  if (!isCharging) return;
+  let direction = 1; // 1 = charging up, -1 = charging down
+
+  const interval = setInterval(() => {
+    setPower((prev) => {
+      let next = prev + direction * 0.5;
+
+      if (next >= maxPower) {
+        next = maxPower;
+        direction = -1; // start going down
+      }
+      if (next <= 0) {
+        next = 0;
+        direction = 1; // start going up
+      }
+
+      return next;
+    });
+  }, 50);
+
+  return () => clearInterval(interval);
+}, [isCharging, maxPower]);
+
 
   // Check win
   useEffect(() => {
@@ -587,7 +653,15 @@ function Game() {
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
         <Suspense fallback={null}>
         <GolfCourse level={level} />
-        <FollowBallCamera ballPosition={ballPosition} />
+       <FollowBallCamera
+  ballPosition={ballPosition}
+  ballVelocity={ballVelocity}
+  holePosition={new Vector3(level.holePosition.x, level.holePosition.y, level.holePosition.z)}
+  isSettingDirection={isSettingDirection}
+  directionAngle={directionAngle}
+/>
+
+
         <GolfBall
           position={ballPosition}
           velocity={ballVelocity}
@@ -599,25 +673,45 @@ function Game() {
           level={level}
         />
 
-          {/* Direction Needle (flat arrow) */}
-          {isSettingDirection && (
-            <group
-              position={[ballPosition.x, ballPosition.y + 0.1, ballPosition.z]}
-              rotation={[0, directionAngle, 0]} // rotate around Y
-            >
-              {/* Shaft (flat box) */}
-              <mesh position={[0.5, 0, 0]}>
-                <boxGeometry args={[1, 0.02, 0.05]} />
-                <meshStandardMaterial color="red" />
-              </mesh>
+          {/* Direction / Power Arrow */}
+{(isSettingDirection || isCharging) && !isMoving && !gameWon && (
+  <group
+    position={[ballPosition.x, ballPosition.y + 0.1, ballPosition.z]}
+    rotation={[0, directionAngle, 0]} // rotate based on chosen angle
+  >
+    {/* Shaft */}
+    <mesh
+      position={[
+        isCharging ? (power / maxPower) : 0.5, // grow with power if charging, else fixed
+        0,
+        0
+      ]}
+    >
+      <boxGeometry
+        args={[
+          isCharging ? (power / maxPower) * 2 : 1, // dynamic length if charging
+          0.02,
+          0.05
+        ]}
+      />
+      <meshStandardMaterial color="red" />
+    </mesh>
 
-              {/* Arrow head (triangle/cone lying flat) */}
-              <mesh position={[1.1, 0, 0]} rotation={[0, 0, Math.PI / 2]}>
-                <coneGeometry args={[0.15, 0.3, 8]} />
-                <meshStandardMaterial color="red" />
-              </mesh>
-            </group>
-          )}
+    {/* Arrow head */}
+    <mesh
+      position={[
+        isCharging ? (power / maxPower) * 2.2 : 1.1,
+        0,
+        0
+      ]}
+      rotation={[0, 0, -Math.PI / 2]}
+    >
+      <coneGeometry args={[0.15, 0.3, 8]} />
+      <meshStandardMaterial color="red" />
+    </mesh>
+  </group>
+)}
+
 
           <Environment preset="sunset" />
         </Suspense>
@@ -625,11 +719,12 @@ function Game() {
         <OrbitControls
   makeDefault
   enablePan={false}
-  minDistance={5}
+  minDistance={2}
   maxDistance={20}
   maxPolarAngle={Math.PI / 2.2}
   enabled={!isSettingDirection}
 />
+
       </Canvas>
 
       {/* UI */}
@@ -666,7 +761,7 @@ function Game() {
         </>
       )}
 
-      <div className="absolute bottom-4 right-4 bg-black/50 text-white p-2 rounded text-sm">
+      <div className="absolute bottom-4 right-4 font-game bg-black/50 text-white p-2 rounded text-sm">
         {isSettingDirection ? "← → to adjust direction" : "Drag to rotate camera • Mouse wheel to zoom"}
       </div>
     </div>

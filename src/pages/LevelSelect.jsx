@@ -113,7 +113,7 @@ export default function LevelSelect() {
           <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 shadow-2xl">
             <div className="flex flex-col items-center space-y-4">
               <div className="w-12 h-12 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-              <p className="text-white font-medium text-lg">Loading levels...</p>
+              <p className="text-white font-game font-medium text-lg">Loading levels...</p>
             </div>
           </div>
         </div>
