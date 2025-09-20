@@ -22,9 +22,9 @@ export const levels = [
     description: "The fairway bends around a tree. Plan your angle!",
     par: 10,
     starsRequired: 2,
-    ballStart: { x: -4, y: 0.25, z: 0 },  // left side of first platform
-    holePosition: { x: 32, y: 0.2, z: 0 }, 
-    holeRadius: 0.5,
+    ballStart: { x: -4, y: 0.5, z: 0 },  // left side of first platform
+    holePosition: { x: 13, y: 0.2, z: 16 }, 
+    holeRadius: 0.3,
     unlockCost: 2,
     difficulty: "medium",
     terrain: {
