@@ -173,10 +173,20 @@ function GolfCourse({ level }) {
   return (
     <group>
       {/* Base ground */}
-      <mesh position={[0, -0.05, 0]} receiveShadow>
-        <boxGeometry args={[level.terrain?.width || 20, 0.1, level.terrain?.height || 20]} />
-        <meshStandardMaterial color="#2d5a2d" />
-      </mesh>
+      {level.terrain?.radius ? (
+        // Circular
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]} receiveShadow>
+          <circleGeometry args={[level.terrain.radius, 64]} />
+          <meshStandardMaterial color="#2d5a2d" />
+        </mesh>
+      ) : (
+        // Rectangular
+        <mesh position={[0, -0.05, 0]} receiveShadow>
+          <boxGeometry args={[level.terrain.width || 20, 0.1, level.terrain.height || 20]} />
+          <meshStandardMaterial color="#2d5a2d" />
+        </mesh>
+      )}
+
 
       {/* Hole */}
       <mesh

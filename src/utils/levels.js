@@ -14,6 +14,7 @@ export const levels = [
     unlockCost: 0,
     difficulty: "easy",
     terrain: {
+      radius: 20,
       width: 40,
       height: 10,
       obstacles: [
