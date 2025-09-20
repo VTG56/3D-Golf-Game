@@ -55,7 +55,8 @@ export default function ForgotPassword() {
           <div className="mb-6 text-center">
             <Link
               to="/login"
-              className="inline-flex items-center text-white/90 hover:text-white transition-colors duration-200 font-medium"
+              className="text-white/80 font-game px-8 py-3 hover:text-white bg-gradient-to-r from-rose-950 to-purple-900 transform group-hover:scale-105 transition-transform duration-300 rounded-xl  font-medium text-lg transition-colors duration-200 hover:underline underline-offset-4 hover:scale-125"
+          
             >
               <span className="mr-2">←</span>
               Back to Login
