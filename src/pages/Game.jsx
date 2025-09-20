@@ -175,10 +175,10 @@ function Game() {
 
     const handleKeyDown = (e) => {
       if (e.key === "ArrowLeft") {
-        setDirectionAngle((a) => a - 0.1);
+        setDirectionAngle((a) => a + 0.1);
       }
       if (e.key === "ArrowRight") {
-        setDirectionAngle((a) => a + 0.1);
+        setDirectionAngle((a) => a - 0.1);
       }
     };
 
@@ -198,7 +198,8 @@ function Game() {
     setIsCharging(false);
 
     // use chosen direction vector
-    const dir = new Vector3(Math.cos(directionAngle), 0, Math.sin(directionAngle));
+    const dir = new Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle));
+
 
 
 
