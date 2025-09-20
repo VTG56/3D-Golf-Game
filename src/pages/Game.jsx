@@ -47,22 +47,47 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving 
     </mesh>
   );
 }
-
-// ---------------- Golf Course ----------------
 function GolfCourse() {
   return (
     <group>
-      <mesh position={[0, -0.05, 0]} receiveShadow>
-        <boxGeometry args={[20, 0.1, 20]} />
+      {/* 1. Start flat */}
+      <mesh position={[0, 0, 0]}>
+        <boxGeometry args={[16, 0.1, 4]} />
         <meshStandardMaterial color="#2d5a2d" />
       </mesh>
 
-      <mesh position={[8, -0.02, 0]} receiveShadow>
+      {/* 2. Upward slope (connects from flat 1 to higher flat 2) */}
+      <mesh position={[8, 0.5, 0]} rotation={[0, 0, 0.12]}>
+        <boxGeometry args={[8, 0.1, 4]} />
+        <meshStandardMaterial color="#2d5a2d" />
+      </mesh>
+
+      {/* 3. Middle elevated flat */}
+      <mesh position={[16, 1, 0]}>
+        <boxGeometry args={[8, 0.1, 4]} />
+        <meshStandardMaterial color="#2d5a2d" />
+      </mesh>
+
+      {/* 4. Downward slope (connects from elevated flat back down) */}
+      <mesh position={[24, 0.5, 0]} rotation={[0, 0, -0.12]}>
+        <boxGeometry args={[8, 0.1, 4]} />
+        <meshStandardMaterial color="#2d5a2d" />
+      </mesh>
+
+      {/* 5. Final ground-level flat */}
+      <mesh position={[32, 0, 0]}>
+        <boxGeometry args={[8, 0.1, 4]} />
+        <meshStandardMaterial color="#2d5a2d" />
+      </mesh>
+
+      {/* Hole */}
+      <mesh position={[32, 0.1, 0]} receiveShadow>
         <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
         <meshStandardMaterial color="#1a1a1a" />
       </mesh>
 
-      <group position={[8, 0, 0]}>
+      {/* Flag */}
+      <group position={[32, 0.1, 0]}>
         <mesh position={[0, 1, 0]}>
           <cylinderGeometry args={[0.02, 0.02, 2, 8]} />
           <meshStandardMaterial color="#8B4513" />
@@ -72,6 +97,24 @@ function GolfCourse() {
           <meshStandardMaterial color="#ff0000" side={2} />
         </mesh>
       </group>
+
+      {/* Side walls */}
+      <mesh position={[16, 0.5, -2]}>
+        <boxGeometry args={[40, 1, 0.2]} />
+        <meshStandardMaterial color="#8B4513" />
+      </mesh>
+      <mesh position={[16, 0.5, 2]}>
+        <boxGeometry args={[40, 1, 0.2]} />
+        <meshStandardMaterial color="#8B4513" />
+      </mesh>
+      <mesh position={[16, 1, -2]}>
+        <boxGeometry args={[40, 1, 0.2]} />
+        <meshStandardMaterial color="#8B4513" />
+      </mesh>
+      <mesh position={[16, 1, 2]}>
+        <boxGeometry args={[40, 1, 0.2]} />
+        <meshStandardMaterial color="#8B4513" />
+      </mesh>
     </group>
   );
 }

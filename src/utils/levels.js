@@ -4,21 +4,17 @@
 export const levels = [
   {
     id: 1,
-    name: "Straight Shot",
-    description: "A simple straight fairway. Just aim and putt!",
-    par: 9,
+    name: "Straight Lane",
+    description: "A simple straight mini-golf lane.",
+    par: 3,
     starsRequired: 0,
-    ballStart: { x: -8, y: 0.25, z: 0 },
-    holePosition: { x: 8, y: 0.2, z: 0 },
-    holeRadius: 0.5,
+    ballStart: { x: -5, y: 0.25, z: 0 },
+    holePosition: { x: 19, y: 0.2, z: 8 },
+ // hole at end of path
+    holeRadius: 0.3,
     unlockCost: 0,
     difficulty: "easy",
-    terrain: {
-      width: 20,
-      height: 10,
-      slopes: [], // flat ground
-      obstacles: [] // no trees/rocks
-    },
+    terrain: {},
   },
   {
     id: 2,
@@ -26,8 +22,8 @@ export const levels = [
     description: "The fairway bends around a tree. Plan your angle!",
     par: 10,
     starsRequired: 2,
-    ballStart: { x: -8, y: 0.2, z: -2 },
-    holePosition: { x: 8, y: 0.2, z: 2 },
+    ballStart: { x: -4, y: 0.25, z: 0 },  // left side of first platform
+    holePosition: { x: 32, y: 0.2, z: 0 }, 
     holeRadius: 0.5,
     unlockCost: 2,
     difficulty: "medium",
