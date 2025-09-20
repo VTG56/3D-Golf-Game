@@ -53,18 +53,11 @@ export const levels = [
           height: 3,
           speed: 1.5 // radians per second
         }, 
-        { type: "barrier", x: 3, z: -4, width: 4, height: 0.5, thickness: 0.2,rotation: [0, Math.PI / 5, 0] }, // strip
+        { type: "rock", x: 2, z: -3.8, scale: 2 },
+        
         // { type: "barrier", x: 4, z: -1, width: 5, height: 0.5, thickness: 0.2, rotation: [0, Math.PI / 3, 0] },
         { type: "barrel", x: 5, z: -1, scale: 1 },
-        { type: "sand", x: -8, z: 0, width: 2, depth: 4 },
-        {
-          type: "tunnel",
-          x: -5,
-          z: 0,
-          width: 3,
-          height: 2,
-          depth: 6
-        }
+        { type: "sand", x: -8, z: 0, width: 2, depth: 4 }
       ]
     }
   },

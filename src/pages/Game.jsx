@@ -221,16 +221,28 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving,
       }
 
       if (obs.type === "windmill") {
-        const angle = (performance.now() / 1000) * (obs.speed || 1);
+        const time = performance.now() / 1000;
+        const angle = time * (obs.speed || 1);
+      
         const bladeLength = obs.bladeLength || 2;
-        const rel = newPos.clone().sub(new Vector3(obs.x, 0, obs.z));
-        const dist = Math.sqrt(rel.x * rel.x + rel.z * rel.z);
-
-        if (dist < bladeLength / 2 + 0.2) {
+        const bladeWidth = obs.bladeWidth || 0.2;
+        const center = new Vector3(obs.x, 0, obs.z);
+      
+        // Vector ball → windmill
+        const rel = newPos.clone().sub(center);
+      
+        // Rotate ball into blade’s local space
+        const localX = rel.x * Math.cos(-angle) - rel.z * Math.sin(-angle);
+        const localZ = rel.x * Math.sin(-angle) + rel.z * Math.cos(-angle);
+      
+        // Check collision with a thin rectangle (blade)
+        if (Math.abs(localX) < bladeLength / 2 && Math.abs(localZ) < bladeWidth / 2) {
+          // Knock ball away
           velocity.x = Math.cos(angle) * 5;
           velocity.z = Math.sin(angle) * 5;
         }
       }
+      
     });
 
     // --- Regular physics ---
