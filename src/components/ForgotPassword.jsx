@@ -49,8 +49,8 @@ export default function ForgotPassword() {
       </div>
       
       {/* Form Overlay */}
-      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8">
-        <div className="w-full max-w-md">
+      <div className="relative z-10 flex items-center justify-center min-h-screen px-4 py-8 ">
+        <div className="w-full max-w-md ">
           {/* Back to login */}
           <div className="mb-6 text-center">
             <Link
@@ -119,8 +119,11 @@ export default function ForgotPassword() {
                   <h2 className="text-2xl font-bold text-white mb-4 font-game">
                     EMAIL SENT!
                   </h2>
+                  <h2 className="text-2xl font-bold text-white mb-4 font-game">
+                    PLEASE CHECK YOUR SPAM FOLDERRRRR !!!!!
+                  </h2>
                   <p className="text-white/80 mb-6">
-                    Check your inbox for password reset instructions. The email may take a few minutes to arrive.
+                    Password reset instructions sent. The email may take a few minutes to arrive.
                   </p>
                   <div className="space-y-3">
                     <Link
