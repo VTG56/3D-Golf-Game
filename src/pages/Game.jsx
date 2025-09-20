@@ -1,5 +1,5 @@
 import React, { Suspense, useState, useEffect } from "react";
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame,useThree  } from "@react-three/fiber";
 import { OrbitControls, Environment, Text } from "@react-three/drei";
 import { Vector3 } from "three";
 import { useParams, useNavigate } from "react-router-dom";
@@ -48,7 +48,8 @@ function Windmill({ obs }) {
 
 
 // ---------------- Golf Ball ----------------
-function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving, obstacles }) {
+// ---------------- Golf Ball ----------------
+function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving, obstacles, resetBall, level }) {
   const ballRef = React.useRef();
 
   useFrame((_, delta) => {
@@ -56,64 +57,56 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving,
 
     const newPos = position.clone().add(velocity.clone().multiplyScalar(delta));
 
+    // --- Out of bounds check ---
+    let outOfBounds = false;
+
+    if (level.terrain?.radius) {
+      // Circular terrain
+      const dist = Math.sqrt(newPos.x ** 2 + newPos.z ** 2);
+      if (dist > level.terrain.radius) {
+        outOfBounds = true;
+      }
+    } else {
+      // Rectangular terrain
+      const halfW = (level.terrain.width || 20) / 2;
+      const halfH = (level.terrain.height || 20) / 2;
+      if (Math.abs(newPos.x) > halfW || Math.abs(newPos.z) > halfH) {
+        outOfBounds = true;
+      }
+    }
+
+    if (outOfBounds) {
+      resetBall();
+      return; // 🔹 stop physics update this frame
+    }
+
     // --- Collision check with obstacles ---
     obstacles?.forEach(obs => {
-      if (obs.type === "rock" || obs.type === "barrel" || obs.type === "tree" || obs.type === "pillar") {
+      if (obs.type === "rock" || obs.type === "barrel" || obs.type === "pillar") {
         const dist = newPos.distanceTo(new Vector3(obs.x, 0, obs.z));
         const radius = 0.5 * (obs.scale || 1);
-        if (dist < radius + 0.005) {
-          // bounce back
+        if (dist < radius) {
           velocity.x *= -0.6;
           velocity.z *= -0.6;
         }
       }
-      if (obs.type === "tunnel") {
-        const halfDepth = (obs.depth || 2) / 2;   // left/right gap
-        const halfWidth = (obs.width || 3) / 2;   // forward/back length
-        const h = obs.height || 1.5;              // roof height
-        const thickness = 0.2; // wall thickness
-      
-        // Ball relative to tunnel center
-        const relX = newPos.x - obs.x; // left/right
-        const relZ = newPos.z - obs.z; // front/back
-        const relY = newPos.y;         // vertical
-      
-        // Inside tunnel forward/back range?
-        if (Math.abs(relZ) <= halfWidth) {
-          // --- Left wall ---
-          if (relX < -halfDepth && relX > -halfDepth - thickness) {
-            velocity.x = Math.abs(velocity.x) * 0.6; // bounce right
-          }
-      
-          // --- Right wall ---
-          if (relX > halfDepth && relX < halfDepth + thickness) {
-            velocity.x = -Math.abs(velocity.x) * 0.6; // bounce left
-          }
-      
-          // --- Roof ---
-          if (relY > h && relY < h + thickness) {
-            velocity.y = -Math.abs(velocity.y) * 0.6; // bounce downward
-          }
+      if (obs.type === "tree") {
+        const distXZ = Math.sqrt(
+          (newPos.x - obs.x) ** 2 +
+          (newPos.z - obs.z) ** 2
+        );
+        const trunkRadius = 0.5 * (obs.scale || 1);  // wider trunk if scaled
+        if (distXZ < trunkRadius ) {
+          // Push ball outward
+          const pushDir = new Vector3(
+            newPos.x - obs.x,
+            0,
+            newPos.z - obs.z
+          ).normalize();
+          velocity.x = pushDir.x * 2;
+          velocity.z = pushDir.z * 2;
         }
       }
-      if (obs.type === "windmill") {
-        const angle = (performance.now() / 1000) * (obs.speed || 1);
-        const bladeLength = obs.bladeLength || 2;
-        const bladeWidth = obs.bladeWidth || 0.2;
-      
-        // Ball relative to windmill center
-        const rel = newPos.clone().sub(new Vector3(obs.x, 0, obs.z));
-      
-        // Project into XZ plane
-        const dist = Math.sqrt(rel.x * rel.x + rel.z * rel.z);
-      
-        if (dist < bladeLength ) {
-          // If ball is close enough to rotating area → knock it
-          velocity.x = Math.cos(angle) * 5;
-          velocity.z = Math.sin(angle) * 5;
-        }
-      }
-      
       
 
       if (obs.type === "barrier") {
@@ -135,15 +128,49 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving,
           Math.abs(newPos.x - obs.x) < halfW &&
           Math.abs(newPos.z - obs.z) < halfD
         ) {
-          // extra friction
           velocity.multiplyScalar(0.9);
+        }
+      }
+
+      if (obs.type === "tunnel") {
+        const halfDepth = (obs.depth || 2) / 2;
+        const halfWidth = (obs.width || 3) / 2;
+        const h = obs.height || 1.5;
+        const thickness = 0.2;
+
+        const relX = newPos.x - obs.x;
+        const relZ = newPos.z - obs.z;
+        const relY = newPos.y;
+
+        if (Math.abs(relZ) <= halfWidth) {
+          if (relX < -halfDepth && relX > -halfDepth - thickness) {
+            velocity.x = Math.abs(velocity.x) * 0.6;
+          }
+          if (relX > halfDepth && relX < halfDepth + thickness) {
+            velocity.x = -Math.abs(velocity.x) * 0.6;
+          }
+          if (relY > h && relY < h + thickness) {
+            velocity.y = -Math.abs(velocity.y) * 0.6;
+          }
+        }
+      }
+
+      if (obs.type === "windmill") {
+        const angle = (performance.now() / 1000) * (obs.speed || 1);
+        const bladeLength = obs.bladeLength || 2;
+        const rel = newPos.clone().sub(new Vector3(obs.x, 0, obs.z));
+        const dist = Math.sqrt(rel.x * rel.x + rel.z * rel.z);
+
+        if (dist < bladeLength / 2 + 0.2) {
+          velocity.x = Math.cos(angle) * 5;
+          velocity.z = Math.sin(angle) * 5;
         }
       }
     });
 
     // --- Regular physics ---
-    velocity.multiplyScalar(0.98);
-    velocity.y -= 9.8 * delta * 0.1;
+    velocity.multiplyScalar(0.98); // friction
+    velocity.y -= 9.8 * delta * 0.1; // gravity
 
     if (newPos.y <= 0.1) {
       newPos.y = 0.1;
@@ -167,6 +194,33 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving,
     </mesh>
   );
 }
+function CameraControls() {
+  const { camera } = useThree();
+  const speed = 0.2;
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "w") {
+        camera.position.z -= speed;
+      }
+      if (e.key === "s") {
+        camera.position.z += speed;
+      }
+      if (e.key === "a") {
+        camera.position.x -= speed;
+      }
+      if (e.key === "d") {
+        camera.position.x += speed;
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [camera]);
+
+  return null;
+}
+
 
 // ---------------- Golf Course ----------------
 function GolfCourse({ level }) {
@@ -351,7 +405,12 @@ function Game() {
   const [directionAngle, setDirectionAngle] = useState(0); // radians
 
   const maxPower = 15;
-
+  const resetBall = () => {
+    setBallPosition(new Vector3(level.ballStart.x, level.ballStart.y, level.ballStart.z));
+    setBallVelocity(new Vector3(0, 0, 0));
+    setIsMoving(false);
+    setShots((s) => s + 1); // penalty stroke
+  };
   // Start timer
   useEffect(() => {
     if (gameStarted) setStartTime(Date.now());
@@ -439,6 +498,8 @@ function Game() {
     setShots((s) => s + 1);
     setPower(0);
   };
+  
+  
 
   const resetGame = () => {
     setBallPosition(new Vector3(level.ballStart.x, level.ballStart.y, level.ballStart.z));
@@ -520,7 +581,9 @@ function Game() {
           onPositionChange={setBallPosition}
           isMoving={isMoving}
           setIsMoving={setIsMoving}
-          obstacles={level.terrain?.obstacles}
+            obstacles={level.terrain?.obstacles}
+            resetBall={resetBall}
+          level={level}
         />
 
           {/* Direction Needle (flat arrow) */}
@@ -545,6 +608,7 @@ function Game() {
 
           <Environment preset="sunset" />
         </Suspense>
+        <CameraControls />
         <OrbitControls
           enablePan={false}
           minDistance={5}
