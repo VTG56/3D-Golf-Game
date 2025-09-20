@@ -98,7 +98,7 @@ export default function LandingPage() {
           </div>
           
           <p className="text-white/80 font-game text-sm md:text-base font-medium">
-            Join and compete with other players worldwide!
+            Join and compete with other players !
           </p>
         </div>
 
@@ -109,7 +109,7 @@ export default function LandingPage() {
             "🎮 Physics-Based Gameplay",
             "🏆 Global Leaderboards", 
             "🌐 Multiplayer Tournaments",
-            "📱 Cross-Platform Play"
+            "📱 Cross-Device Login"
           ].map((feature, index) => (
             <div
               key={index}
