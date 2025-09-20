@@ -47,64 +47,56 @@ function Windmill({ obs }) {
 
 
 function FollowBallCamera({ ballPosition, ballVelocity, holePosition, isSettingDirection, directionAngle }) {
-
   const { controls, camera } = useThree();
   const initialized = React.useRef(false);
 
   useFrame(() => {
-    if (controls) {
-      // --- On first render or reset, set camera behind ball facing hole ---
+    if (!controls) return;
+
+    const speed = ballVelocity.length();
+
+    // Only auto-follow if the ball is moving
+    if (speed > 0.05) {
       if (!initialized.current) {
-        const ballVec = ballPosition.clone();
-        const holeVec = holePosition.clone();
-
-        // Direction from ball → hole
-        const dir = new Vector3().subVectors(holeVec, ballVec).normalize();
-
-        // Place camera behind the ball
-        const camPos = ballVec.clone().add(dir.clone().multiplyScalar(-8)).setY(ballVec.y + 5);
-
+        // Initial setup: camera behind ball facing hole
+        const dir = new Vector3().subVectors(holePosition, ballPosition).normalize();
+        const camPos = ballPosition.clone().add(dir.clone().multiplyScalar(-8)).setY(ballPosition.y + 5);
         camera.position.copy(camPos);
-        camera.lookAt(holeVec);
-
+        camera.lookAt(holePosition);
         initialized.current = true;
       }
 
-      // --- Normal follow behaviour (zoom & smooth move) ---
+      // Smooth follow when ball is moving
       controls.target.lerp(ballPosition, 0.1);
 
-      const speed = ballVelocity.length();
       const desiredDistance = Math.min(Math.max(8 + speed * 0.5, 6), 18);
-
       const direction = new Vector3();
       camera.getWorldDirection(direction);
       const newPos = ballPosition.clone().sub(direction.multiplyScalar(desiredDistance));
-
       camera.position.lerp(newPos, 0.05);
 
       controls.update();
     }
   });
+
+  // While setting direction, snap behind chosen direction (but not forcing constantly)
   useEffect(() => {
-  if (!isSettingDirection) {
-    const ballVec = ballPosition.clone();
-    const dir = new Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle)).normalize();
+    if (isSettingDirection) {
+      const dir = new Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle)).normalize();
+      const camPos = ballPosition.clone().add(dir.clone().multiplyScalar(-8)).setY(ballPosition.y + 5);
+      camera.position.copy(camPos);
+      camera.lookAt(ballPosition.clone().add(dir.clone().multiplyScalar(10)));
+    }
+  }, [isSettingDirection, directionAngle, ballPosition]);
 
-    // Place camera slightly behind ball in opposite of chosen direction
-    const camPos = ballVec.clone().add(dir.clone().multiplyScalar(-8)).setY(ballVec.y + 5);
-
-    camera.position.copy(camPos);
-    camera.lookAt(ballVec.clone().add(dir.clone().multiplyScalar(10))); // look forward in chosen direction
-  }
-}, [isSettingDirection, directionAngle]);
-
-  // Reset camera whenever ball resets
+  // Reset when ball resets
   useEffect(() => {
     initialized.current = false;
   }, [ballPosition]);
 
   return null;
 }
+
 
 // ---------------- Golf Ball ----------------
 // ---------------- Golf Ball ----------------
@@ -653,13 +645,15 @@ useEffect(() => {
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
         <Suspense fallback={null}>
         <GolfCourse level={level} />
-       <FollowBallCamera
+        <FollowBallCamera
   ballPosition={ballPosition}
   ballVelocity={ballVelocity}
   holePosition={new Vector3(level.holePosition.x, level.holePosition.y, level.holePosition.z)}
   isSettingDirection={isSettingDirection}
   directionAngle={directionAngle}
+  enableFollow={!isSettingDirection && isMoving} // new prop
 />
+
 
 
         <GolfBall
@@ -717,15 +711,15 @@ useEffect(() => {
         </Suspense>
         <CameraControls />
         <OrbitControls
-  makeDefault
-  enablePan={false}
-  minDistance={2}
-  maxDistance={20}
-  maxPolarAngle={Math.PI / 2.2}
-  enabled={true}
-/>
-
-      </Canvas>
+          makeDefault
+          enablePan={true}
+          enableZoom={true}
+          minDistance={2}
+          maxDistance={20}
+          maxPolarAngle={Math.PI / 2.2}
+          enabled={true}
+        />
+              </Canvas>
 
       {/* UI */}
       <div className="absolute font-game top-4 left-4 bg-black/50 text-white p-4 rounded-lg">
