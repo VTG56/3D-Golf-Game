@@ -133,7 +133,7 @@ function FloatingClouds() {
   return (
     <>
       <Cloud
-        opacity={0.5}
+        opacity={0.6}   // brighter, fuller
         speed={0.2}
         width={10}
         depth={1.5}
@@ -142,8 +142,8 @@ function FloatingClouds() {
         color="#ffffff"
       />
       <Cloud
-        opacity={0.3}
-        speed={0.3}
+        opacity={0.5}
+        speed={0.25}
         width={8}
         depth={1}
         segments={15}
@@ -151,8 +151,8 @@ function FloatingClouds() {
         color="#ffffff"
       />
       <Cloud
-        opacity={0.4}
-        speed={0.1}
+        opacity={0.55}
+        speed={0.15}
         width={12}
         depth={2}
         segments={25}
@@ -187,7 +187,7 @@ export default function ThreeScene({ className = "" }) {
           shadow-camera-top={20}
           shadow-camera-bottom={-20}
         />
-        <pointLight position={[-10, 10, -10]} intensity={0.3} color="#4ade80" />
+        <pointLight position={[-10, 10, -10]} intensity={0.1} color="#ffffff" />
         
         {/* Sky */}
         <Sky
