@@ -46,6 +46,19 @@ function Windmill({ obs }) {
 }
 
 
+function FollowBallCamera({ ballPosition }) {
+  const { controls } = useThree();
+
+  useFrame(() => {
+    if (controls) {
+      // Always center orbit controls on the ball
+      controls.target.lerp(ballPosition, 0.1); // smooth follow
+      controls.update();
+    }
+  });
+
+  return null;
+}
 
 // ---------------- Golf Ball ----------------
 // ---------------- Golf Ball ----------------
@@ -569,12 +582,12 @@ function Game() {
 
   return (
     <div className="w-full h-screen relative">
-      <Canvas shadows camera={{ position: [-5, 8, 8], fov: 60 }}>
+      <Canvas shadows camera={{  fov: 0 }}>
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
         <Suspense fallback={null}>
         <GolfCourse level={level} />
-
+        <FollowBallCamera ballPosition={ballPosition} />
         <GolfBall
           position={ballPosition}
           velocity={ballVelocity}
@@ -610,12 +623,13 @@ function Game() {
         </Suspense>
         <CameraControls />
         <OrbitControls
-          enablePan={false}
-          minDistance={5}
-          maxDistance={20}
-          maxPolarAngle={Math.PI / 2.2}
-          enabled={!isSettingDirection}
-        />
+  makeDefault
+  enablePan={false}
+  minDistance={5}
+  maxDistance={20}
+  maxPolarAngle={Math.PI / 2.2}
+  enabled={!isSettingDirection}
+/>
       </Canvas>
 
       {/* UI */}
