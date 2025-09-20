@@ -8,8 +8,47 @@ import EndOfRound from "../components/EndOfRound";
 import { useAuth } from "../hooks/useAuth";
 import { useProgress } from "../hooks/useProgress";
 
+function Windmill({ obs }) {
+  const bladesRef = React.useRef();
+
+  useFrame((_, delta) => {
+    if (bladesRef.current) {
+      bladesRef.current.rotation.z += (obs.speed || 1) * delta; // spin around hub
+    }
+  });
+
+  return (
+    <group>
+      {/* Pole */}
+      <mesh position={[obs.x, (obs.height || 3) / 2, obs.z]}>
+        <cylinderGeometry args={[0.1, 0.1, obs.height || 3, 16]} />
+        <meshStandardMaterial color="brown" />
+      </mesh>
+
+      {/* Blades group */}
+      <group ref={bladesRef} position={[obs.x, obs.height || 3, obs.z]}>
+        {/* Hub (center circle) */}
+        <mesh>
+          <cylinderGeometry args={[0.2, 0.2, 0.2, 16]} />
+          <meshStandardMaterial color="black" />
+        </mesh>
+
+        {/* Blades */}
+        {[0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2].map((angle, i) => (
+          <mesh key={i} rotation={[0, 0, angle]} position={[0, 0, 0]}>
+            <boxGeometry args={[obs.bladeLength || 2, obs.bladeWidth || 0.2, 0.2]} />
+            <meshStandardMaterial color="white" />
+          </mesh>
+        ))}
+      </group>
+    </group>
+  );
+}
+
+
+
 // ---------------- Golf Ball ----------------
-function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving }) {
+function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving, obstacles }) {
   const ballRef = React.useRef();
 
   useFrame((_, delta) => {
@@ -17,13 +56,95 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving 
 
     const newPos = position.clone().add(velocity.clone().multiplyScalar(delta));
 
-    // Friction
-    velocity.multiplyScalar(0.98);
+    // --- Collision check with obstacles ---
+    obstacles?.forEach(obs => {
+      if (obs.type === "rock" || obs.type === "barrel" || obs.type === "tree" || obs.type === "pillar") {
+        const dist = newPos.distanceTo(new Vector3(obs.x, 0, obs.z));
+        const radius = 0.5 * (obs.scale || 1);
+        if (dist < radius + 0.005) {
+          // bounce back
+          velocity.x *= -0.6;
+          velocity.z *= -0.6;
+        }
+      }
+      if (obs.type === "tunnel") {
+        const halfDepth = (obs.depth || 2) / 2;   // left/right gap
+        const halfWidth = (obs.width || 3) / 2;   // forward/back length
+        const h = obs.height || 1.5;              // roof height
+        const thickness = 0.2; // wall thickness
+      
+        // Ball relative to tunnel center
+        const relX = newPos.x - obs.x; // left/right
+        const relZ = newPos.z - obs.z; // front/back
+        const relY = newPos.y;         // vertical
+      
+        // Inside tunnel forward/back range?
+        if (Math.abs(relZ) <= halfWidth) {
+          // --- Left wall ---
+          if (relX < -halfDepth && relX > -halfDepth - thickness) {
+            velocity.x = Math.abs(velocity.x) * 0.6; // bounce right
+          }
+      
+          // --- Right wall ---
+          if (relX > halfDepth && relX < halfDepth + thickness) {
+            velocity.x = -Math.abs(velocity.x) * 0.6; // bounce left
+          }
+      
+          // --- Roof ---
+          if (relY > h && relY < h + thickness) {
+            velocity.y = -Math.abs(velocity.y) * 0.6; // bounce downward
+          }
+        }
+      }
+      if (obs.type === "windmill") {
+        const angle = (performance.now() / 1000) * (obs.speed || 1);
+        const bladeLength = obs.bladeLength || 2;
+        const bladeWidth = obs.bladeWidth || 0.2;
+      
+        // Ball relative to windmill center
+        const rel = newPos.clone().sub(new Vector3(obs.x, 0, obs.z));
+      
+        // Project into XZ plane
+        const dist = Math.sqrt(rel.x * rel.x + rel.z * rel.z);
+      
+        if (dist < bladeLength ) {
+          // If ball is close enough to rotating area → knock it
+          velocity.x = Math.cos(angle) * 5;
+          velocity.z = Math.sin(angle) * 5;
+        }
+      }
+      
+      
 
-    // Gravity
+      if (obs.type === "barrier") {
+        const halfW = (obs.width || 2) / 2;
+        const halfD = (obs.thickness || 0.2) / 2;
+        if (
+          Math.abs(newPos.x - obs.x) < halfW &&
+          Math.abs(newPos.z - obs.z) < halfD
+        ) {
+          velocity.x *= -0.6;
+          velocity.z *= -0.6;
+        }
+      }
+
+      if (obs.type === "sand") {
+        const halfW = (obs.width || 2) / 2;
+        const halfD = (obs.depth || 2) / 2;
+        if (
+          Math.abs(newPos.x - obs.x) < halfW &&
+          Math.abs(newPos.z - obs.z) < halfD
+        ) {
+          // extra friction
+          velocity.multiplyScalar(0.9);
+        }
+      }
+    });
+
+    // --- Regular physics ---
+    velocity.multiplyScalar(0.98);
     velocity.y -= 9.8 * delta * 0.1;
 
-    // Bounce
     if (newPos.y <= 0.1) {
       newPos.y = 0.1;
       velocity.y = Math.abs(velocity.y) * 0.6;
@@ -31,7 +152,6 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving 
       velocity.z *= 0.8;
     }
 
-    // Stop if velocity small
     if (velocity.length() < 0.1) {
       setIsMoving(false);
       velocity.set(0, 0, 0);
@@ -49,20 +169,26 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving 
 }
 
 // ---------------- Golf Course ----------------
-function GolfCourse() {
+function GolfCourse({ level }) {
   return (
     <group>
+      {/* Base ground */}
       <mesh position={[0, -0.05, 0]} receiveShadow>
-        <boxGeometry args={[20, 0.1, 20]} />
+        <boxGeometry args={[level.terrain?.width || 20, 0.1, level.terrain?.height || 20]} />
         <meshStandardMaterial color="#2d5a2d" />
       </mesh>
 
-      <mesh position={[8, -0.02, 0]} receiveShadow>
-        <cylinderGeometry args={[0.3, 0.3, 0.1, 16]} />
+      {/* Hole */}
+      <mesh
+        position={[level.holePosition.x, level.holePosition.y, level.holePosition.z]}
+        receiveShadow
+      >
+        <cylinderGeometry args={[level.holeRadius, level.holeRadius, 0.1, 16]} />
         <meshStandardMaterial color="#1a1a1a" />
       </mesh>
 
-      <group position={[8, 0, 0]}>
+      {/* Flag */}
+      <group position={[level.holePosition.x, 0, level.holePosition.z]}>
         <mesh position={[0, 1, 0]}>
           <cylinderGeometry args={[0.02, 0.02, 2, 8]} />
           <meshStandardMaterial color="#8B4513" />
@@ -72,9 +198,104 @@ function GolfCourse() {
           <meshStandardMaterial color="#ff0000" side={2} />
         </mesh>
       </group>
+
+      {/* Obstacles */}
+      {level.terrain?.obstacles?.map((obs, i) => (
+        <group
+          key={i}
+          position={[obs.x, 0, obs.z]}
+          rotation={obs.rotation || [0, 0, 0]}
+          scale={[obs.scale || 1, obs.scale || 1, obs.scale || 1]}>
+          {/* Tree */}
+          {obs.type === "tree" && (
+            <>
+              {/* Trunk */}
+              <mesh position={[0, 0.5, 0]}>
+                <cylinderGeometry args={[0.1, 0.1, 1]} />
+                <meshStandardMaterial color="#8B4513" />
+              </mesh>
+              {/* Leaves */}
+              <mesh position={[0, 1.2, 0]}>
+                <coneGeometry args={[0.6, 1.2, 8]} />
+                <meshStandardMaterial color="green" />
+              </mesh>
+            </>
+          )}
+          {obs.type === "windmill" && <Windmill obs={obs} />}
+
+
+          {/* Rock */}
+          {obs.type === "rock" && (
+            <mesh position={[0, 0, 0]}>
+              <sphereGeometry args={[0.4, 16, 16]} />
+              <meshStandardMaterial color="gray" />
+            </mesh>
+          )}
+
+
+          {/* Barrier / Strip */}
+          {obs.type === "barrier" && (
+            <mesh position={[0, (obs.height || 0.5) / 2, 0]}>
+              <boxGeometry args={[obs.width || 2, obs.height || 0.5, obs.thickness || 0.2]} />
+              <meshStandardMaterial color="#654321" />
+            </mesh>
+          )}
+          {/* Barrel */}
+          {obs.type === "barrel" && (
+            <group>
+              {/* Barrel body */}
+              <mesh position={[0, 0.5, 0]} scale={[obs.scale || 1, obs.scale || 1, obs.scale || 1]}>
+                <cylinderGeometry args={[0.4, 0.4, 1, 16]} />
+                <meshStandardMaterial color="#8B4513" />
+              </mesh>
+              {/* Barrel rings */}
+              <mesh position={[0, 0.2, 0]} scale={[obs.scale || 1, 1, obs.scale || 1]}>
+                <torusGeometry args={[0.4, 0.05, 8, 16]} />
+                <meshStandardMaterial color="black" />
+              </mesh>
+              <mesh position={[0, 0.8, 0]} scale={[obs.scale || 1, 1, obs.scale || 1]}>
+                <torusGeometry args={[0.4, 0.05, 8, 16]} />
+                <meshStandardMaterial color="black" />
+              </mesh>
+            </group>
+          )}
+
+          {/* Sand Pit */}
+          {obs.type === "sand" && (
+            <mesh position={[0, 0.01, 0]}>
+              <boxGeometry args={[obs.width || 2, 0.02, obs.depth || 2]} />
+              <meshStandardMaterial color="#C2B280" />
+            </mesh>
+          )}
+
+          {/* Tunnel */}
+          {obs.type === "tunnel" && (
+            <group>
+              {/* Tunnel base (arch sides) */}
+              <mesh position={[0, obs.height / 2 || 0.75, -(obs.depth || 3) / 2]}>
+                <boxGeometry args={[obs.width || 2, obs.height || 1.5, 0.2]} />
+                <meshStandardMaterial color="gray" />
+              </mesh>
+              <mesh position={[0, obs.height / 2 || 0.75, (obs.depth || 3) / 2]}>
+                <boxGeometry args={[obs.width || 2, obs.height || 1.5, 0.2]} />
+                <meshStandardMaterial color="gray" />
+              </mesh>
+
+              {/* Top of tunnel */}
+              <mesh position={[0, obs.height || 1.5, 0]}>
+                <boxGeometry args={[obs.width || 2, 0.2, obs.depth || 3]} />
+                <meshStandardMaterial color="gray" />
+              </mesh>
+            </group>
+          )}
+
+        </group>
+      ))}
+      
     </group>
   );
 }
+
 
 // ---------------- Power Meter ----------------
 function PowerMeter({ power, maxPower }) {
@@ -175,10 +396,10 @@ function Game() {
 
     const handleKeyDown = (e) => {
       if (e.key === "ArrowLeft") {
-        setDirectionAngle((a) => a - 0.1);
+        setDirectionAngle((a) => a + 0.1);
       }
       if (e.key === "ArrowRight") {
-        setDirectionAngle((a) => a + 0.1);
+        setDirectionAngle((a) => a - 0.1);
       }
     };
 
@@ -200,7 +421,7 @@ function Game() {
     // use chosen direction vector
     const dir = new Vector3(Math.cos(directionAngle), 0, -Math.sin(directionAngle));
 
-    const shotVelocity = dir.multiplyScalar(power * 0.8);
+    const shotVelocity = dir.multiplyScalar(power * 1.5);
     shotVelocity.y = power * 0.1;
 
     setBallVelocity(shotVelocity);
@@ -281,14 +502,16 @@ function Game() {
         <ambientLight intensity={0.4} />
         <directionalLight position={[10, 10, 5]} intensity={1} castShadow />
         <Suspense fallback={null}>
-          <GolfCourse />
-          <GolfBall
-            position={ballPosition}
-            velocity={ballVelocity}
-            onPositionChange={setBallPosition}
-            isMoving={isMoving}
-            setIsMoving={setIsMoving}
-          />
+        <GolfCourse level={level} />
+
+        <GolfBall
+          position={ballPosition}
+          velocity={ballVelocity}
+          onPositionChange={setBallPosition}
+          isMoving={isMoving}
+          setIsMoving={setIsMoving}
+          obstacles={level.terrain?.obstacles}
+        />
 
           {/* Direction Needle (flat arrow) */}
           {isSettingDirection && (
