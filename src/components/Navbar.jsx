@@ -18,7 +18,6 @@ export default function Navbar() {
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: '🏠' },
     { name: 'Play', path: '/levels', icon: '⛳' },
     { name: 'Leaderboard', path: '/leaderboard', icon: '🏆' },
     { name: 'Tournaments', path: '/tournaments', icon: '🏅' },
