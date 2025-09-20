@@ -387,7 +387,7 @@ function GolfCourse({ level }) {
           {obs.type === "sand" && (
             <mesh position={[0, 0.01, 0]}>
               <boxGeometry args={[obs.width || 2, 0.02, obs.depth || 2]} />
-              <meshStandardMaterial color="#C2B280" />
+              <meshStandardMaterial color="#B39B6D" />
             </mesh>
           )}
 

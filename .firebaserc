@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "golf3d-80291"
-  }
+    "hosting": "golf3d-4809a"
+  },
+  "targets": {},
+  "etags": {}
 }

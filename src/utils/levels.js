@@ -6,7 +6,7 @@ export const levels = [
     id: 1,
     name: "Straight Lane",
     description: "A simple straight mini-golf lane.",
-    par: 4,
+    par: 10,
     starsRequired: 0,
     ballStart: { x: -5, y: 0.15, z: 0 },
     holePosition: { x: 15, y: 0, z: 0 },
@@ -28,7 +28,7 @@ export const levels = [
     id: 2,
     name: "Bridge Madness",
     description: "Cross two raised platforms with a gap and reach the hole!",
-    par: 9,
+    par: 15,
     starsRequired: 3,
     ballStart: { x: -12, y: 0.15, z: 0 },
     holePosition: { x: 12, y: 0.2, z: 0 },
@@ -41,7 +41,7 @@ export const levels = [
       obstacles: [
         { type: "rock", x: 5, z: 3, scale: 2 },  // rock in the middle gap
         { type: "rock", x: 3, z: 5, scale: 2 },  // rock in the middle gap
-        { type: "rock", x: 0, z: 0, scale: 2 },  // rock in the middle gap
+        { type: "rock", x: 0, z: 1, scale: 5 },  // rock in the middle gap
         { type: "tree", x: 8, z: 0, scale: 5 },
         { type: "tree", x: -4, z: -5, scale: 5 },
         {
