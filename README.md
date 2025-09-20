@@ -1,17 +1,17 @@
 # ⛳ Golf3D – Web Minigolf Game
 
-An interactive _3D Minigolf experience_ built with _React + Three.js_ and powered by _Firebase (Auth + Firestore)_.  
-This project is part of _CloneFest 2025 – Week 3 Challenge_.
+An interactive **3D Minigolf experience** built with **React + Three.js** and powered by **Firebase (Auth + Firestore)**.  
+This project is part of **CloneFest 2025 – Week 3 Challenge**.
 
 ---
 
 ## 🚀 Tech Stack
 
-- _Frontend:_ React (Vite) + Three.js (react-three-fiber)
-- _Backend:_ Firebase (Auth, Firestore, Storage)
-- _Auth:_ Email/Password & Google Sign-In
-- _Hosting:_ Firebase Hosting
-- _Deployment:_ CI/CD with GitHub → Firebase
+- **Frontend:** React (Vite) + Three.js (react-three-fiber)
+- **Backend:** Firebase (Auth, Firestore, Storage)
+- **Auth:** Email/Password & Google Sign-In
+- **Hosting:** Firebase Hosting
+- **Deployment:** CI/CD with GitHub → Firebase
 
 ---
 
