@@ -154,7 +154,7 @@ function GolfBall({ position, velocity, onPositionChange, isMoving, setIsMoving,
           (newPos.x - obs.x) ** 2 +
           (newPos.z - obs.z) ** 2
         );
-        const trunkRadius = 0.5 * (obs.scale || 1);  // wider trunk if scaled
+        const trunkRadius = 0.1 * (obs.scale || 1);  // wider trunk if scaled
         if (distXZ < trunkRadius ) {
           // Push ball outward
           const pushDir = new Vector3(
