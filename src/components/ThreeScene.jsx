@@ -213,9 +213,9 @@ export default function ThreeScene({ className = "" }) {
         
         {/* Camera Controls - disabled for landing page, can be enabled for interactive scenes */}
         <OrbitControls
-          enablePan={false}
+          enablePan={true}
           enableZoom={false}
-          enableRotate={false}
+          enableRotate={true}
           autoRotate
           autoRotateSpeed={0.5}
         />

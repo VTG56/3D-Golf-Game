@@ -722,7 +722,7 @@ useEffect(() => {
   minDistance={2}
   maxDistance={20}
   maxPolarAngle={Math.PI / 2.2}
-  enabled={!isSettingDirection}
+  enabled={true}
 />
 
       </Canvas>
@@ -751,7 +751,7 @@ useEffect(() => {
         <>
           <PowerMeter power={power} maxPower={maxPower} />
           <div
-            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white p-4 rounded-lg cursor-pointer select-none"
+            className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 text-white p-4 rounded-lg cursor-pointer select-none font-game"
             onMouseDown={handleMouseDown}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
