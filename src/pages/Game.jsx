@@ -387,7 +387,7 @@ function Game() {
   const level = levels.find((lvl) => lvl.id === parseInt(levelId));
   if (!level) return <div>Invalid level</div>;
 
-  const [gameStarted, setGameStarted] = useState(false);
+  const [gameStarted, setGameStarted] = useState(true);
   const [ballPosition, setBallPosition] = useState(new Vector3(level.ballStart.x, level.ballStart.y, level.ballStart.z));
   const [ballVelocity, setBallVelocity] = useState(new Vector3(0, 0, 0));
   const [isMoving, setIsMoving] = useState(false);
