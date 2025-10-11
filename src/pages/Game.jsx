@@ -460,7 +460,7 @@ function Game() {
   const { levelId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { setProgress, getGuestId } = useProgress();
+  const { setProgress, getGuestId, initializeGuest } = useProgress();
 
   const level = levels.find((lvl) => lvl.id === parseInt(levelId));
   if (!level) return <div>Invalid level</div>;
@@ -525,33 +525,60 @@ useEffect(() => {
 
 
   // Check win
+  // --------------------------------------------------------
+  // Win detection + progress saving
+  // --------------------------------------------------------
   useEffect(() => {
     const hole = new Vector3(level.holePosition.x, level.holePosition.y, level.holePosition.z);
+  
     if (ballPosition.distanceTo(hole) < level.holeRadius && !isMoving && !gameWon) {
       setGameWon(true);
-
+  
       // Calculate results
       const time = Math.floor((Date.now() - startTime) / 1000);
       const stars = calculateStars(shots, level.par);
       setTimeTaken(time);
       setStarsEarned(stars);
-
-      // Save progress
-      const uid = user && !user.isAnonymous ? user.uid : null;
-      const guestId = !uid ? getGuestId() : null;
-
-      setProgress({
-        uid,
-        guestId,
-        levelId: level.id,
-        strokes: shots,
-        stars,
-        timeTaken: time,
-      });
-
-      setTimeout(() => setShowEndScreen(true), 1000); // delay for effect
+  
+      // Save progress asynchronously
+      (async () => {
+        try {
+          if (user && !user.isAnonymous) {
+            // Logged-in user — save to Firestore
+            const updated = await setProgress({
+              uid: user.uid,
+              levelId: level.id.toString(),
+              strokes: shots,
+              stars,
+              timeTaken: time,
+            });
+            console.log("✅ Saved progress (auth):", updated);
+          } else {
+            // Guest user — save to localStorage
+            let guestId = getGuestId();
+            if (!guestId) {
+              guestId = await initializeGuest();
+            }
+  
+            const updated = await setProgress({
+              guestId,
+              levelId: level.id.toString(),
+              strokes: shots,
+              stars,
+              timeTaken: time,
+            });
+            console.log("✅ Saved progress (guest):", updated);
+          }
+        } catch (err) {
+          console.error("❌ Failed to save progress:", err);
+        } finally {
+          // Show End-of-Round screen after save completes
+          setTimeout(() => setShowEndScreen(true), 600);
+        }
+      })();
     }
-  }, [ballPosition, isMoving]);
+  }, [ballPosition, isMoving, gameWon, level, shots, startTime, user, setProgress, getGuestId, initializeGuest]);
+  
 
   // --- Direction toggle ---
   const toggleDirectionMode = () => {

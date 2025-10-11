@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, updateDoc, runTransaction } from 'firebase/firestore';
+// src/hooks/useProgress.js
+import { useState } from 'react';
+import { doc, getDoc, setDoc, runTransaction } from 'firebase/firestore';
 import { signInAnonymously } from 'firebase/auth';
 import { db, auth } from '../firebase/firebase';
 import toast from 'react-hot-toast';
@@ -10,7 +11,6 @@ const GUEST_ID_KEY = 'golf3d_guestId';
 
 /**
  * Hook to manage user progress for both authenticated users and guests
- * Handles reading/writing progress data and guest->user migration
  */
 export function useProgress() {
   const [loading, setLoading] = useState(false);
@@ -27,24 +27,24 @@ export function useProgress() {
 
   /**
    * Initialize guest session with anonymous authentication
-   * @returns {Promise<string>} Guest user ID
+   * @returns {Promise<string>} guestId
    */
   const initializeGuest = async () => {
     try {
       setLoading(true);
-      
-      // Check if already has guest session
+
+      // If guestId exists and auth currentUser matches return it
       let guestId = getGuestId();
       if (guestId && auth.currentUser?.isAnonymous && auth.currentUser.uid === guestId) {
         return guestId;
       }
 
-      // Create new anonymous user
+      // create anonymous user
       const { user } = await signInAnonymously(auth);
       guestId = user.uid;
       setGuestId(guestId);
 
-      // Initialize empty progress for guest
+      // initialize progress for guest
       const initialProgress = {
         levelStats: {},
         totalStars: 0,
@@ -55,282 +55,217 @@ export function useProgress() {
 
       toast.success('Guest session started!');
       return guestId;
-    } catch (error) {
-      console.error('Error initializing guest:', error);
+    } catch (err) {
+      console.error('Error initializing guest:', err);
       toast.error('Failed to start guest session');
-      throw error;
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Get progress data for user or guest
-   * @param {Object} params
-   * @param {string} params.uid - User ID (null for guest)
-   * @param {string} params.guestId - Guest ID (null for authenticated user)
-   * @returns {Promise<Object>} Progress data
+   * Get progress for uid (auth user) or guestId (guest)
+   * returns object: { levelStats, totalStars, gamesPlayed }
    */
   const getProgress = async ({ uid = null, guestId = null }) => {
     try {
       setLoading(true);
 
       if (uid) {
-        // Get progress from Firestore for authenticated user
-        const userDoc = await getDoc(doc(db, 'users', uid));
+        // Authenticated user - read from Firestore
+        const userDocRef = doc(db, 'users', uid);
+        const userDoc = await getDoc(userDocRef);
         if (userDoc.exists()) {
-          const userData = userDoc.data();
+          const data = userDoc.data();
           return {
-            levelStats: userData.progress?.levelStats || {},
-            totalStars: userData.progress?.totalStars || 0,
-            gamesPlayed: userData.progress?.gamesPlayed || 0
+            levelStats: data.progress?.levelStats || {},
+            totalStars: data.progress?.totalStars || 0,
+            gamesPlayed: data.progress?.gamesPlayed || 0
           };
         } else {
-          // Initialize new user progress
-          const initialProgress = {
-            levelStats: {},
-            totalStars: 0,
-            gamesPlayed: 0
-          };
-          await setDoc(doc(db, 'users', uid), {
-            progress: initialProgress,
-            createdAt: new Date(),
-            updatedAt: new Date()
-          });
+          // Initialize progress for user
+          const initialProgress = { levelStats: {}, totalStars: 0, gamesPlayed: 0 };
+          await setDoc(userDocRef, { progress: initialProgress, createdAt: new Date(), updatedAt: new Date() }, { merge: true });
           return initialProgress;
         }
       } else if (guestId) {
-        // Get progress from localStorage for guest
-        const guestData = localStorage.getItem(`${GUEST_STORAGE_KEY}_${guestId}`);
-        if (guestData) {
-          return JSON.parse(guestData);
+        const raw = localStorage.getItem(`${GUEST_STORAGE_KEY}_${guestId}`);
+        if (raw) {
+          return JSON.parse(raw);
         } else {
-          // Initialize new guest progress
-          const initialProgress = {
-            levelStats: {},
-            totalStars: 0,
-            gamesPlayed: 0,
-            createdAt: new Date().toISOString()
-          };
+          const initialProgress = { levelStats: {}, totalStars: 0, gamesPlayed: 0, createdAt: new Date().toISOString() };
           localStorage.setItem(`${GUEST_STORAGE_KEY}_${guestId}`, JSON.stringify(initialProgress));
           return initialProgress;
         }
       }
 
-      throw new Error('No uid or guestId provided');
-    } catch (error) {
-      console.error('Error getting progress:', error);
-      throw error;
+      throw new Error('No uid or guestId provided to getProgress');
+    } catch (err) {
+      console.error('Error getting progress:', err);
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Set/update progress data for a specific level
-   * @param {Object} params
-   * @param {string} params.uid - User ID (null for guest)
-   * @param {string} params.guestId - Guest ID (null for authenticated user)
-   * @param {string} params.levelId - Level identifier
-   * @param {number} params.strokes - Number of strokes taken
-   * @param {number} params.stars - Stars earned (0-3)
-   * @param {number} params.timeTaken - Time taken in seconds
-   * @returns {Promise<void>}
+   * Set / update progress for a level.
+   * Returns the updated progress object so callers can use it immediately.
    */
-  const setProgress = async ({ uid = null, guestId = null, levelId, strokes, stars, timeTaken }) => {
+  const setProgress = async ({ uid = null, guestId = null, levelId, strokes = 0, stars = 0, timeTaken = null }) => {
     try {
       setLoading(true);
 
       if (uid) {
-        // Update Firestore for authenticated user using transaction
-        await runTransaction(db, async (transaction) => {
+        // Authenticated user - use transaction
+        let finalProgress = null;
+        await runTransaction(db, async (tx) => {
           const userDocRef = doc(db, 'users', uid);
-          const userDoc = await transaction.get(userDocRef);
-          
+          const userDoc = await tx.get(userDocRef);
+
           let currentData = {};
-          if (userDoc.exists()) {
-            currentData = userDoc.data();
-          }
+          if (userDoc.exists()) currentData = userDoc.data();
 
-          const currentProgress = currentData.progress || {
-            levelStats: {},
-            totalStars: 0,
-            gamesPlayed: 0
-          };
+          const currentProgress = currentData.progress || { levelStats: {}, totalStars: 0, gamesPlayed: 0 };
+          const currentLevelStats = currentProgress.levelStats?.[levelId] || { bestStrokes: Infinity, bestStars: 0, timesPlayed: 0, bestTime: Infinity };
 
-          const currentLevelStats = currentProgress.levelStats[levelId] || {
-            bestStrokes: Infinity,
-            bestStars: 0,
-            timesPlayed: 0,
-            bestTime: Infinity
-          };
-
-          // Update level stats - keep best values
           const newLevelStats = {
             ...currentLevelStats,
-            bestStrokes: Math.min(currentLevelStats.bestStrokes, strokes),
-            bestStars: Math.max(currentLevelStats.bestStars, stars),
-            bestTime: timeTaken ? Math.min(currentLevelStats.bestTime, timeTaken) : currentLevelStats.bestTime,
-            timesPlayed: currentLevelStats.timesPlayed + 1,
+            bestStrokes: Math.min(currentLevelStats.bestStrokes || Infinity, strokes),
+            bestStars: Math.max(currentLevelStats.bestStars || 0, stars),
+            bestTime: timeTaken != null ? Math.min(currentLevelStats.bestTime || Infinity, timeTaken) : currentLevelStats.bestTime,
+            timesPlayed: (currentLevelStats.timesPlayed || 0) + 1,
             lastPlayed: new Date().toISOString()
           };
 
-          // Calculate total stars (sum of best stars for each level)
           const newLevelStatsMap = {
-            ...currentProgress.levelStats,
+            ...(currentProgress.levelStats || {}),
             [levelId]: newLevelStats
           };
-          const totalStars = Object.values(newLevelStatsMap).reduce((sum, stats) => sum + stats.bestStars, 0);
 
-          // Update the document
+          const totalStars = Object.values(newLevelStatsMap).reduce((sum, s) => sum + (s.bestStars || 0), 0);
+
           const updatedProgress = {
             levelStats: newLevelStatsMap,
             totalStars,
-            gamesPlayed: currentProgress.gamesPlayed + 1
+            gamesPlayed: (currentProgress.gamesPlayed || 0) + 1
           };
 
-          transaction.set(userDocRef, {
+          // Write back
+          tx.set(userDocRef, {
             ...currentData,
             progress: updatedProgress,
             updatedAt: new Date()
           }, { merge: true });
+
+          finalProgress = updatedProgress;
         });
 
         toast.success(`Progress saved! Earned ${stars} stars`);
+        return finalProgress;
       } else if (guestId) {
-        // Update localStorage for guest
-        const currentData = localStorage.getItem(`${GUEST_STORAGE_KEY}_${guestId}`);
-        const currentProgress = currentData ? JSON.parse(currentData) : {
-          levelStats: {},
-          totalStars: 0,
-          gamesPlayed: 0
-        };
+        // Guest localStorage
+        const raw = localStorage.getItem(`${GUEST_STORAGE_KEY}_${guestId}`);
+        const currentProgress = raw ? JSON.parse(raw) : { levelStats: {}, totalStars: 0, gamesPlayed: 0 };
 
-        const currentLevelStats = currentProgress.levelStats[levelId] || {
-          bestStrokes: Infinity,
-          bestStars: 0,
-          timesPlayed: 0,
-          bestTime: Infinity
-        };
+        const currentLevelStats = currentProgress.levelStats?.[levelId] || { bestStrokes: Infinity, bestStars: 0, timesPlayed: 0, bestTime: Infinity };
 
-        // Update level stats - keep best values
         const newLevelStats = {
           ...currentLevelStats,
-          bestStrokes: Math.min(currentLevelStats.bestStrokes, strokes),
-          bestStars: Math.max(currentLevelStats.bestStars, stars),
-          bestTime: timeTaken ? Math.min(currentLevelStats.bestTime, timeTaken) : currentLevelStats.bestTime,
-          timesPlayed: currentLevelStats.timesPlayed + 1,
+          bestStrokes: Math.min(currentLevelStats.bestStrokes || Infinity, strokes),
+          bestStars: Math.max(currentLevelStats.bestStars || 0, stars),
+          bestTime: timeTaken != null ? Math.min(currentLevelStats.bestTime || Infinity, timeTaken) : currentLevelStats.bestTime,
+          timesPlayed: (currentLevelStats.timesPlayed || 0) + 1,
           lastPlayed: new Date().toISOString()
         };
 
-        // Calculate total stars
         const newLevelStatsMap = {
-          ...currentProgress.levelStats,
+          ...(currentProgress.levelStats || {}),
           [levelId]: newLevelStats
         };
-        const totalStars = Object.values(newLevelStatsMap).reduce((sum, stats) => sum + stats.bestStars, 0);
 
-        // Save updated progress
+        const totalStars = Object.values(newLevelStatsMap).reduce((sum, s) => sum + (s.bestStars || 0), 0);
+
         const updatedProgress = {
           ...currentProgress,
           levelStats: newLevelStatsMap,
           totalStars,
-          gamesPlayed: currentProgress.gamesPlayed + 1,
+          gamesPlayed: (currentProgress.gamesPlayed || 0) + 1,
           updatedAt: new Date().toISOString()
         };
 
         localStorage.setItem(`${GUEST_STORAGE_KEY}_${guestId}`, JSON.stringify(updatedProgress));
         toast.success(`Progress saved locally! Earned ${stars} stars`);
+        return updatedProgress;
+      } else {
+        throw new Error('No uid or guestId passed to setProgress');
       }
-    } catch (error) {
-      console.error('Error setting progress:', error);
+    } catch (err) {
+      console.error('Error setting progress:', err);
       toast.error('Failed to save progress');
-      throw error;
+      throw err;
     } finally {
       setLoading(false);
     }
   };
 
   /**
-   * Migrate guest progress to authenticated user account
-   * @param {Object} params
-   * @param {string} params.guestId - Guest ID to migrate from
-   * @param {string} params.uid - User ID to migrate to
-   * @returns {Promise<void>}
+   * Migrate guest progress into authenticated user account (merge best stats)
    */
   const migrateGuestToUser = async ({ guestId, uid }) => {
     try {
       setLoading(true);
 
-      // Get guest progress from localStorage
-      const guestData = localStorage.getItem(`${GUEST_STORAGE_KEY}_${guestId}`);
-      if (!guestData) {
+      const raw = localStorage.getItem(`${GUEST_STORAGE_KEY}_${guestId}`);
+      if (!raw) {
         console.log('No guest data to migrate');
         return;
       }
+      const guestProgress = JSON.parse(raw);
 
-      const guestProgress = JSON.parse(guestData);
-
-      // Get current user progress from Firestore
       const userDocRef = doc(db, 'users', uid);
       const userDoc = await getDoc(userDocRef);
-      
-      let currentUserProgress = {
-        levelStats: {},
-        totalStars: 0,
-        gamesPlayed: 0
-      };
 
+      let currentUserProgress = { levelStats: {}, totalStars: 0, gamesPlayed: 0 };
       if (userDoc.exists()) {
-        const userData = userDoc.data();
-        currentUserProgress = userData.progress || currentUserProgress;
+        currentUserProgress = userDoc.data().progress || currentUserProgress;
       }
 
-      // Merge progress data - take best values from each
-      const mergedLevelStats = { ...currentUserProgress.levelStats };
-      
-      Object.entries(guestProgress.levelStats).forEach(([levelId, guestStats]) => {
-        const userStats = mergedLevelStats[levelId] || {
-          bestStrokes: Infinity,
-          bestStars: 0,
-          timesPlayed: 0,
-          bestTime: Infinity
-        };
+      // Merge by taking best values
+      const mergedLevelStats = { ...(currentUserProgress.levelStats || {}) };
 
-        mergedLevelStats[levelId] = {
-          bestStrokes: Math.min(userStats.bestStrokes, guestStats.bestStrokes),
-          bestStars: Math.max(userStats.bestStars, guestStats.bestStars),
-          bestTime: Math.min(userStats.bestTime, guestStats.bestTime || Infinity),
-          timesPlayed: userStats.timesPlayed + guestStats.timesPlayed,
-          lastPlayed: [userStats.lastPlayed, guestStats.lastPlayed]
-            .filter(Boolean)
-            .sort()
-            .pop() || new Date().toISOString()
+      Object.entries(guestProgress.levelStats || {}).forEach(([lvl, guestStats]) => {
+        const userStats = mergedLevelStats[lvl] || { bestStrokes: Infinity, bestStars: 0, timesPlayed: 0, bestTime: Infinity };
+        mergedLevelStats[lvl] = {
+          bestStrokes: Math.min(userStats.bestStrokes || Infinity, guestStats.bestStrokes || Infinity),
+          bestStars: Math.max(userStats.bestStars || 0, guestStats.bestStars || 0),
+          bestTime: Math.min(userStats.bestTime || Infinity, guestStats.bestTime || Infinity),
+          timesPlayed: (userStats.timesPlayed || 0) + (guestStats.timesPlayed || 0),
+          lastPlayed: [userStats.lastPlayed, guestStats.lastPlayed].filter(Boolean).sort().pop() || new Date().toISOString()
         };
       });
 
-      // Calculate total stars from merged data
-      const totalStars = Object.values(mergedLevelStats).reduce((sum, stats) => sum + stats.bestStars, 0);
+      const totalStars = Object.values(mergedLevelStats).reduce((sum, s) => sum + (s.bestStars || 0), 0);
 
-      // Save merged progress to Firestore
       await setDoc(userDocRef, {
         progress: {
           levelStats: mergedLevelStats,
           totalStars,
-          gamesPlayed: currentUserProgress.gamesPlayed + guestProgress.gamesPlayed
+          gamesPlayed: (currentUserProgress.gamesPlayed || 0) + (guestProgress.gamesPlayed || 0)
         },
         updatedAt: new Date()
       }, { merge: true });
 
-      // Clear guest data from localStorage
+      // clear guest
       localStorage.removeItem(`${GUEST_STORAGE_KEY}_${guestId}`);
       localStorage.removeItem(GUEST_ID_KEY);
 
-      toast.success('Guest progress successfully migrated to your account!');
-    } catch (error) {
-      console.error('Error migrating guest to user:', error);
-      toast.error('Failed to migrate guest progress');
-      throw error;
+      toast.success('Guest progress migrated to account');
+    } catch (err) {
+      console.error('Error migrating guest to user:', err);
+      toast.error('Failed to migrate progress');
+      throw err;
     } finally {
       setLoading(false);
     }

@@ -51,7 +51,7 @@ export default function LevelSelect() {
     } catch (error) {
       console.error('Error loading progress:', error);
       //toast.error('Failed to load progress data');
-      toast.error('WOrK iN pROgrESS');
+      // toast.error('WOrK iN pROgrESS');
       // Set empty progress as fallback
       setPlayerProgress({
         levelStats: {},
