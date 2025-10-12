@@ -5,25 +5,40 @@ export const levels = [
   {
     id: 1,
     name: "Straight Lane",
-    description: "A simple straight mini-golf lane.",
+    description: "A simple straight lane with a gentle slope and a wooden plank obstacle.",
     par: 10,
     starsRequired: 0,
-    ballStart: { x: -5, y: 0.15, z: 0 },
+    ballStart: { x: -10, y: 0.15, z: 0 },
     holePosition: { x: 15, y: 0, z: 0 },
     holeRadius: 0.3,
     unlockCost: 0,
     difficulty: "easy",
     terrain: {
-      radius: 20,
       width: 40,
-      height: 10,
+      height: 15,
+  
+      // Add slope data for slight incline
+      slopes: [
+        { x: 0, y: 0, z: 0, width: 10, height: 10, elevation: 5 }  // gentle upward slope in center
+      ],
+  
       obstacles: [
         { type: "tree", x: 8, z: -3, scale: 5 },
-        { type: "rock", x: -2, z: -2, scale: 2 },
+        // removed the rock here
+        {
+          type: "barrier",
+          x: 4,           // horizontal position
+          z: -1,          // depth position
+          width: 5,       // how wide the barrier is
+          height: 0.5,    // how tall it is
+          thickness: 0.2, // how thick it is
+          rotation: [0, Math.PI / 2, 0] // optional rotation in radians
+        },
         { type: "tree", x: 6, z: 2, scale: 3 },
       ],
     },
   },
+  
   {
     id: 2,
     name: "Bridge Madness",
@@ -31,7 +46,7 @@ export const levels = [
     par: 15,
     starsRequired: 3,
     ballStart: { x: -12, y: 0.15, z: 0 },
-    holePosition: { x: 12, y: 0.2, z: 0 },
+    holePosition: { x: 12, y: 0, z: 0 },
     holeRadius: 0.3,
     unlockCost: 3,
     difficulty: "medium",
