@@ -7,6 +7,7 @@ import levels, { calculateStars, getNextLevel } from "../utils/levels";
 import EndOfRound from "../components/EndOfRound";
 import { useAuth } from "../hooks/useAuth";
 import { useProgress } from "../hooks/useProgress";
+import CameraController from "../components/CameraController";
 
 function Windmill({ obs }) {
   const bladesRef = React.useRef();
@@ -72,21 +73,23 @@ function FollowBallCamera({
       controls.target.copy(holePosition);
       controls.update();
 
-      initialized.current = true; // ✅ only once at start/reset
+      initialized.current = true; // âœ… only once at start/reset
     }
 
     // --- 2. Follow the ball while it is moving ---
+    // --- 2. Follow the ball while it is moving ---
     if (speed > 0.05 && !userInteractingRef.current && !isSettingDirection) {
-      controls.target.lerp(ballPosition, 0.1);
-
-      const desiredDistance = Math.min(Math.max(8 + speed * 0.5, 6), 30);
+      // Instead of zooming out, keep a fixed offset behind the ball
+      const fixedDistance = 8; // ðŸ‘ˆ set your preferred distance
       const direction = new Vector3();
       camera.getWorldDirection(direction);
-      const newPos = ballPosition.clone().sub(direction.multiplyScalar(desiredDistance));
+      const newPos = ballPosition.clone().sub(direction.multiplyScalar(fixedDistance));
 
       camera.position.lerp(newPos, 0.05);
+      controls.target.lerp(ballPosition, 0.1);
       controls.update();
     }
+
   });
 
   // --- 3. Handle direction setting mode (DO NOT snap to hole here) ---
@@ -100,7 +103,7 @@ function FollowBallCamera({
       controls.target.copy(ballPosition);
       controls.update();
     }
-    // 🚨 Notice: no goal alignment here!
+    // ðŸš¨ Notice: no goal alignment here!
   }, [isSettingDirection, directionAngle, ballPosition.x, ballPosition.y, ballPosition.z]);
 
   // --- 4. Reset initial alignment ONLY when ball resets ---
@@ -643,7 +646,7 @@ function Game() {
     if (gameStarted) setStartTime(Date.now());
   }, [gameStarted]);
 
-  // Power charging (oscillates between 0 ↔ maxPower)
+  // Power charging (oscillates between 0 â†” maxPower)
   useEffect(() => {
     if (!isCharging) return;
     let direction = 1; // 1 = charging up, -1 = charging down
@@ -685,7 +688,7 @@ function Game() {
       (async () => {
         try {
           if (user && !user.isAnonymous) {
-            // Logged-in user – save to Firestore
+            // Logged-in user â€“ save to Firestore
             const updated = await setProgress({
               uid: user.uid,
               levelId: level.id.toString(),
@@ -693,9 +696,9 @@ function Game() {
               stars,
               timeTaken: time,
             });
-            console.log("✅ Saved progress (auth):", updated);
+            console.log("âœ… Saved progress (auth):", updated);
           } else {
-            // Guest user – save to localStorage
+            // Guest user â€“ save to localStorage
             let guestId = getGuestId();
             if (!guestId) {
               guestId = await initializeGuest();
@@ -708,10 +711,10 @@ function Game() {
               stars,
               timeTaken: time,
             });
-            console.log("✅ Saved progress (guest):", updated);
+            console.log("âœ… Saved progress (guest):", updated);
           }
         } catch (err) {
-          console.error("❌ Failed to save progress:", err);
+          console.error("âŒ Failed to save progress:", err);
         } finally {
           // Show End-of-Round screen after save completes
           setTimeout(() => setShowEndScreen(true), 600);
@@ -948,7 +951,7 @@ function Game() {
       )}
 
       <div className="absolute bottom-4 right-4 font-game bg-black/50 text-white p-2 rounded text-sm">
-        {isSettingDirection ? "← → to adjust direction" : "Drag to rotate camera • Mouse wheel to zoom"}
+        {isSettingDirection ? "â† â†’ to adjust direction" : "Drag to rotate camera â€¢ Mouse wheel to zoom"}
       </div>
     </div>
   );
